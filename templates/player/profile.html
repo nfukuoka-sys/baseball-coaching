@@ -1,0 +1,272 @@
+{% extends 'base.html' %}
+{% block title %}自分のデータ — {{ current_user.name }}{% endblock %}
+{% block content %}
+<div style="margin-bottom:24px;">
+  <div class="dm-page-title">MY DATA</div>
+  <div class="dm-page-sub">フィジカル推移・計測データ・課題</div>
+</div>
+
+<div class="dm-card" data-tabs>
+  <div class="dm-tabs" style="padding:0 20px;">
+    <div class="dm-tab active" data-tab="p-physical">フィジカル</div>
+    <div class="dm-tab" data-tab="p-inbody">InBody</div>
+    <div class="dm-tab" data-tab="p-rapsodo">Rapsodo</div>
+    <div class="dm-tab" data-tab="p-vald">VALD</div>
+    <div class="dm-tab" data-tab="p-issues">課題</div>
+  </div>
+
+  <!-- PHYSICAL -->
+  <div id="p-physical" class="dm-tab-pane active" style="padding:20px;">
+    {% if phys_list %}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;">
+      <div><canvas id="c-weight" height="180"></canvas></div>
+      <div><canvas id="c-sprint" height="180"></canvas></div>
+      <div><canvas id="c-throw"  height="180"></canvas></div>
+      <div><canvas id="c-jump"   height="180"></canvas></div>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="dm-table">
+        <thead><tr><th>日付</th><th>身長</th><th>体重</th><th>50m走</th><th>遠投</th><th>立幅跳</th><th>握力R</th><th>握力L</th></tr></thead>
+        <tbody>
+          {% for d in phys_list|reverse %}
+          <tr>
+            <td style="font-weight:700;">{{ d.date }}</td>
+            <td>{{ (d.height|string ~ ' cm') if d.height else '—' }}</td>
+            <td>{{ (d.weight|string ~ ' kg') if d.weight else '—' }}</td>
+            <td>{{ (d.sprint_50m|string ~ ' 秒') if d.sprint_50m else '—' }}</td>
+            <td>{{ (d.throw_distance|string ~ ' m') if d.throw_distance else '—' }}</td>
+            <td>{{ (d.standing_jump|string ~ ' cm') if d.standing_jump else '—' }}</td>
+            <td>{{ (d.grip_r|string ~ ' kg') if d.grip_r else '—' }}</td>
+            <td>{{ (d.grip_l|string ~ ' kg') if d.grip_l else '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:48px;color:var(--dm-muted);">
+      <i class="bi bi-bar-chart" style="font-size:2.5rem;display:block;margin-bottom:12px;opacity:.3;"></i>
+      フィジカルデータなし
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- INBODY -->
+  <div id="p-inbody" class="dm-tab-pane" style="padding:20px;">
+    {% if inbody_list %}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;">
+      <div><canvas id="c-muscle" height="180"></canvas></div>
+      <div><canvas id="c-fat"    height="180"></canvas></div>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="dm-table">
+        <thead><tr><th>日付</th><th>体重</th><th>骨格筋量</th><th>体脂肪率</th><th>BMI</th><th>基礎代謝</th><th>内臓脂肪</th></tr></thead>
+        <tbody>
+          {% for d in inbody_list|reverse %}
+          <tr>
+            <td style="font-weight:700;">{{ d.date }}</td>
+            <td>{{ d.weight or '—' }}</td>
+            <td>{{ d.skeletal_muscle_mass or '—' }}</td>
+            <td>{{ d.body_fat_pct or '—' }}</td>
+            <td>{{ d.bmi or '—' }}</td>
+            <td>{{ d.basal_metabolic_rate or '—' }}</td>
+            <td>{{ d.visceral_fat or '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:48px;color:var(--dm-muted);">
+      <i class="bi bi-heart-pulse" style="font-size:2.5rem;display:block;margin-bottom:12px;opacity:.3;"></i>
+      InBodyデータなし
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- RAPSODO -->
+  <div id="p-rapsodo" class="dm-tab-pane" style="padding:20px;">
+    {% if rap_list %}
+    <div style="margin-bottom:20px;"><canvas id="c-velo" height="120"></canvas></div>
+    <div style="overflow-x:auto;">
+      <table class="dm-table">
+        <thead><tr><th>日付</th><th>球種</th><th>球速</th><th>回転数</th><th>回転効率</th><th>回転軸</th><th>縦変化</th><th>横変化</th></tr></thead>
+        <tbody>
+          {% for d in rap_list|reverse %}
+          <tr>
+            <td style="font-weight:700;">{{ d.date }}</td>
+            <td>{{ d.pitch_type or '—' }}</td>
+            <td><strong>{{ d.velocity_kmh or '—' }}</strong></td>
+            <td>{{ d.spin_rate or '—' }}</td>
+            <td>{{ d.spin_efficiency or '—' }}</td>
+            <td>{{ d.spin_axis or '—' }}</td>
+            <td>{{ d.vert_break or '—' }}</td>
+            <td>{{ d.horz_break or '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:48px;color:var(--dm-muted);">
+      <i class="bi bi-speedometer" style="font-size:2.5rem;display:block;margin-bottom:12px;opacity:.3;"></i>
+      Rapsodoデータなし
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- VALD -->
+  <div id="p-vald" class="dm-tab-pane" style="padding:20px;">
+    {% if vald_list %}
+
+    {% set jump_rows = vald_list | selectattr('test_type','in',['Countermovement Jump','Squat Jump','Single Leg Jump']) | list %}
+    {% set hop_rows  = vald_list | selectattr('test_type','equalto','Hop Test') | list %}
+    {% set iso_rows  = vald_list | selectattr('test_type','in',['Shoulder ISO-T','Shoulder ISO-Y','Shoulder ISO-I']) | list %}
+
+    {% if jump_rows %}
+    <div style="margin-bottom:20px;"><canvas id="c-jump-h" height="100"></canvas></div>
+    <div style="font-size:.72rem;font-weight:700;letter-spacing:.08em;color:var(--dm-muted);margin-bottom:6px;">JUMP</div>
+    <div style="overflow-x:auto;margin-bottom:20px;">
+      <table class="dm-table">
+        <thead><tr><th>日付</th><th>種別</th><th>高さ cm</th><th>L cm</th><th>R cm</th><th>力 N</th><th>体重比</th><th>RSI</th><th>左右差</th></tr></thead>
+        <tbody>
+          {% for d in jump_rows|reverse %}
+          <tr>
+            <td style="font-weight:700;">{{ d.date }}</td>
+            <td><span style="font-size:.68rem;background:var(--dm-light);padding:2px 6px;border-radius:4px;font-weight:600;">{{ d.test_type|replace('Countermovement Jump','CMJ')|replace('Squat Jump','SQJ')|replace('Single Leg Jump','SLJ') }}</span></td>
+            <td><strong>{{ d.jump_height or '—' }}</strong></td>
+            <td>{{ d.jump_height_left or '—' }}</td>
+            <td>{{ d.jump_height_right or '—' }}</td>
+            <td>{{ d.peak_force or '—' }}</td>
+            <td>{{ d.relative_peak_force or '—' }}</td>
+            <td>{{ d.rsi or '—' }}</td>
+            <td>{% if d.asymmetry_pct %}<span style="color:{% if d.asymmetry_pct|float>10%}#dc2626{% elif d.asymmetry_pct|float>5%}#d97706{% else %}#16a34a{% endif %};">{{ d.asymmetry_pct }}%</span>{% else %}—{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+
+    {% if hop_rows %}
+    <div style="font-size:.72rem;font-weight:700;letter-spacing:.08em;color:var(--dm-muted);margin-bottom:6px;">HOP TEST</div>
+    <div style="overflow-x:auto;margin-bottom:20px;">
+      <table class="dm-table">
+        <thead><tr><th>日付</th><th>脚</th><th>高さ cm</th><th>RSI</th><th>接地 ms</th><th>滞空 ms</th><th>左右差</th></tr></thead>
+        <tbody>
+          {% for d in hop_rows|reverse %}
+          <tr>
+            <td style="font-weight:700;">{{ d.date }}</td>
+            <td>{{ d.hop_leg or '—' }}</td>
+            <td><strong>{{ d.jump_height or '—' }}</strong></td>
+            <td>{{ d.rsi or '—' }}</td>
+            <td>{{ d.contact_time_ms or '—' }}</td>
+            <td>{{ d.flight_time_ms or '—' }}</td>
+            <td>{% if d.asymmetry_pct %}<span style="color:{% if d.asymmetry_pct|float>10%}#dc2626{% elif d.asymmetry_pct|float>5%}#d97706{% else %}#16a34a{% endif %};">{{ d.asymmetry_pct }}%</span>{% else %}—{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+
+    {% if iso_rows %}
+    <div style="font-size:.72rem;font-weight:700;letter-spacing:.08em;color:var(--dm-muted);margin-bottom:6px;">SHOULDER ISO</div>
+    <div style="overflow-x:auto;margin-bottom:20px;">
+      <table class="dm-table">
+        <thead><tr><th>日付</th><th>種別</th><th>左 N</th><th>右 N</th><th>左 N/kg</th><th>右 N/kg</th><th>左右差</th></tr></thead>
+        <tbody>
+          {% for d in iso_rows|reverse %}
+          <tr>
+            <td style="font-weight:700;">{{ d.date }}</td>
+            <td><span style="font-size:.68rem;background:#ede9fe;color:#5b21b6;padding:2px 6px;border-radius:4px;font-weight:600;">{{ d.test_type }}</span></td>
+            <td>{{ d.iso_force_left or '—' }}</td>
+            <td>{{ d.iso_force_right or '—' }}</td>
+            <td>{{ d.iso_relative_left or '—' }}</td>
+            <td>{{ d.iso_relative_right or '—' }}</td>
+            <td>{% if d.asymmetry_pct %}<span style="color:{% if d.asymmetry_pct|float>10%}#dc2626{% elif d.asymmetry_pct|float>5%}#d97706{% else %}#16a34a{% endif %};">{{ d.asymmetry_pct }}%</span>{% else %}—{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div style="text-align:center;padding:48px;color:var(--dm-muted);">
+      <i class="bi bi-activity" style="font-size:2.5rem;display:block;margin-bottom:12px;opacity:.3;"></i>
+      VALDデータなし
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ISSUES -->
+  <div id="p-issues" class="dm-tab-pane" style="padding:20px;">
+    {% if issues %}
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      {% for iss in issues|sort(attribute='created_at', reverse=true) %}
+      <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 14px;border-radius:8px;
+                  {% if iss.is_resolved %}background:#f0fdf4;border:1px solid #bbf7d0;{% else %}background:#fef2f2;border:1px solid #fecaca;{% endif %}">
+        <i class="bi bi-{% if iss.is_resolved %}check-circle-fill{% else %}exclamation-circle-fill{% endif %}"
+           style="color:{% if iss.is_resolved %}#16a34a{% else %}#dc2626{% endif %};margin-top:2px;flex-shrink:0;"></i>
+        <div style="flex:1;">
+          <div style="font-weight:700;font-size:.88rem;{% if iss.is_resolved %}text-decoration:line-through;color:var(--dm-muted);{% endif %}">{{ iss.tag }}</div>
+          {% if iss.description %}<div style="font-size:.78rem;color:var(--dm-muted);margin-top:3px;">{{ iss.description }}</div>{% endif %}
+          <div style="font-size:.7rem;color:var(--dm-muted);margin-top:4px;">{{ iss.created_at.strftime('%Y/%m/%d') }}</div>
+        </div>
+        <span style="font-size:.7rem;padding:2px 8px;border-radius:10px;font-weight:700;flex-shrink:0;
+                     {% if iss.is_resolved %}background:#d1fae5;color:#065f46;{% else %}background:#fee2e2;color:#991b1b;{% endif %}">
+          {% if iss.is_resolved %}解決済み{% else %}対応中{% endif %}
+        </span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:48px;color:var(--dm-muted);">
+      <i class="bi bi-check-circle" style="font-size:2.5rem;display:block;margin-bottom:12px;opacity:.3;color:#16a34a;"></i>
+      課題なし
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const mkLine = (id, label, data, labels, color) => {
+  const el = document.getElementById(id);
+  if (!el || !data.some(v => v !== null)) { if(el) el.parentElement.style.display='none'; return; }
+  new Chart(el, {
+    type: 'line',
+    data: { labels, datasets: [{ label, data, borderColor: color,
+      backgroundColor: color + '18', tension: .35, fill: true, pointRadius: 3, pointHoverRadius: 5 }] },
+    options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } },
+      scales: { y: { beginAtZero: false, ticks: { font: { size: 10 } } }, x: { ticks: { font: { size: 10 }, maxTicksLimit: 8 } } } }
+  });
+};
+
+{% if phys_list %}
+const pLabels = {{ phys_list | map(attribute='date') | map('string') | list | tojson }};
+mkLine('c-weight', '体重 (kg)',   {{ phys_list | map(attribute='weight')         | list | tojson }}, pLabels, '#2563eb');
+mkLine('c-sprint', '50m走 (秒)', {{ phys_list | map(attribute='sprint_50m')     | list | tojson }}, pLabels, '#f59e0b');
+mkLine('c-throw',  '遠投 (m)',   {{ phys_list | map(attribute='throw_distance') | list | tojson }}, pLabels, '#10b981');
+mkLine('c-jump',   '立幅跳 (cm)',{{ phys_list | map(attribute='standing_jump')  | list | tojson }}, pLabels, '#8b5cf6');
+{% endif %}
+
+{% if inbody_list %}
+const iLabels = {{ inbody_list | map(attribute='date') | map('string') | list | tojson }};
+mkLine('c-muscle', '骨格筋量 (kg)', {{ inbody_list | map(attribute='skeletal_muscle_mass') | list | tojson }}, iLabels, '#0f766e');
+mkLine('c-fat',    '体脂肪率 (%)',  {{ inbody_list | map(attribute='body_fat_pct')         | list | tojson }}, iLabels, '#dc2626');
+{% endif %}
+
+{% if rap_list %}
+const rLabels = {{ rap_list | map(attribute='date') | map('string') | list | tojson }};
+mkLine('c-velo', '球速 (km/h)', {{ rap_list | map(attribute='velocity_kmh') | list | tojson }}, rLabels, '#1a4a90');
+{% endif %}
+
+{% if vald_list %}
+const vLabels = {{ vald_list | map(attribute='date') | map('string') | list | tojson }};
+mkLine('c-jump-h', 'ジャンプ高さ (cm)', {{ vald_list | map(attribute='jump_height') | list | tojson }}, vLabels, '#7c3aed');
+{% endif %}
+</script>
+{% endblock %}

@@ -1,0 +1,720 @@
+{% extends 'base.html' %}
+{% block title %}{{ player.name }} — DIMENSIONING{% endblock %}
+{% block content %}
+<div style="margin-bottom:4px;">
+  <a href="{{ url_for('coach_dashboard') }}" style="color:var(--dm-muted);font-size:.78rem;text-decoration:none;">
+    <i class="bi bi-arrow-left me-1"></i>一覧に戻る
+  </a>
+</div>
+
+<!-- Player header -->
+<div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;flex-wrap:wrap;">
+  <div class="dm-avatar" style="width:56px;height:56px;font-size:1.4rem;">{{ player.name[0] }}</div>
+  <div style="flex:1;">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+      <span style="font-size:1.2rem;font-weight:800;letter-spacing:.05em;color:var(--dm-navy);">{{ player.name }}</span>
+      {% if player.is_pending %}
+      <span style="font-size:.65rem;padding:2px 8px;border-radius:10px;font-weight:700;
+                   background:#fef3c7;color:#92400e;border:1px solid #fde68a;">
+        <i class="bi bi-hourglass-split me-1"></i>招待未承認
+      </span>
+      {% else %}
+      <span style="font-size:.65rem;padding:2px 8px;border-radius:10px;font-weight:700;
+                   background:#d1fae5;color:#065f46;border:1px solid #a7f3d0;">
+        <i class="bi bi-check-circle me-1"></i>アクティブ
+      </span>
+      {% endif %}
+    </div>
+    <div style="font-size:.78rem;color:var(--dm-muted);margin-top:3px;display:flex;flex-wrap:wrap;gap:12px;">
+      {% if player.position %}<span><i class="bi bi-geo-alt me-1"></i>{{ player.position }}</span>{% endif %}
+      {% if player.dominant_hand %}<span><i class="bi bi-hand-index me-1"></i>利き腕: {{ player.dominant_hand }}</span>{% endif %}
+      {% if player.grade %}<span><i class="bi bi-mortarboard me-1"></i>{{ player.grade }}</span>{% endif %}
+      {% if player.team %}<span><i class="bi bi-people me-1"></i>{{ player.team }}</span>{% endif %}
+      {% if player.born_year %}<span><i class="bi bi-calendar3 me-1"></i>{{ player.born_year }}年生</span>{% endif %}
+      {% if player.email %}<span><i class="bi bi-envelope me-1"></i>{{ player.email }}</span>{% endif %}
+    </div>
+  </div>
+  {% if issues %}
+  <div style="display:flex;flex-wrap:wrap;gap:6px;">
+    {% for iss in issues %}<span class="issue-tag">{{ iss.tag }}</span>{% endfor %}
+  </div>
+  {% endif %}
+</div>
+
+<!-- 招待リンク UI -->
+{% if player.is_pending or not player.email %}
+<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px 16px;margin-bottom:16px;
+            display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+  <div style="flex:1;min-width:0;">
+    <div style="font-size:.78rem;font-weight:700;color:#92400e;margin-bottom:2px;">
+      <i class="bi bi-link-45deg me-1"></i>招待リンクを送ってアカウントを有効化してください
+    </div>
+    {% if active_invite %}
+    <div style="font-size:.72rem;color:#78350f;background:#fef3c7;padding:5px 10px;border-radius:6px;
+                overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:6px;font-family:monospace;">
+      {{ request.host_url }}join/{{ active_invite.token }}
+    </div>
+    <div style="font-size:.65rem;color:#92400e;margin-top:4px;">
+      有効期限: {{ active_invite.expires_at.strftime('%Y/%m/%d %H:%M') }} まで
+    </div>
+    {% endif %}
+  </div>
+  <form method="POST" action="{{ url_for('generate_invite', pid=player.id) }}" style="flex-shrink:0;">
+    <button type="submit" class="btn-dm btn-sm-dm" style="background:#d97706;white-space:nowrap;">
+      <i class="bi bi-send"></i> {% if active_invite %}再発行{% else %}招待リンクを発行{% endif %}
+    </button>
+  </form>
+</div>
+{% endif %}
+
+<!-- Tabs -->
+<div class="dm-card" data-tabs>
+  <div class="dm-tabs" style="padding:0 20px;">
+    <div class="dm-tab active" data-tab="physical">フィジカル</div>
+    <div class="dm-tab" data-tab="inbody">InBody</div>
+    <div class="dm-tab" data-tab="rapsodo">Rapsodo</div>
+    <div class="dm-tab" data-tab="vald">VALD</div>
+    <div class="dm-tab" data-tab="drills">ドリル</div>
+    <div class="dm-tab" data-tab="issues">課題{% if issues %} <span style="background:#ef4444;color:#fff;font-size:.65rem;padding:1px 5px;border-radius:8px;margin-left:3px;">{{ issues|length }}</span>{% endif %}</div>
+    <div class="dm-tab" data-tab="feedback">フィードバック{% if feedbacks %} <span style="background:#2563eb;color:#fff;font-size:.65rem;padding:1px 5px;border-radius:8px;margin-left:3px;">{{ feedbacks|length }}</span>{% endif %}</div>
+    <div class="dm-tab" data-tab="player-videos">動画{% if player_videos %} <span style="background:#0f766e;color:#fff;font-size:.65rem;padding:1px 5px;border-radius:8px;margin-left:3px;">{{ player_videos|length }}</span>{% endif %}</div>
+  </div>
+
+  <!-- ── PHYSICAL ── -->
+  <div id="physical" class="dm-tab-pane active" style="padding:20px;">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:14px;">
+      <button class="btn-dm-outline btn-sm-dm collapse-toggle" data-target="phys-form">
+        <i class="bi bi-plus"></i> データ追加
+      </button>
+    </div>
+    <div id="phys-form" style="display:none;background:var(--dm-light);border-radius:8px;padding:16px;margin-bottom:16px;">
+      <form method="POST" action="{{ url_for('add_physical', pid=player.id) }}">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:10px;">
+          <div><label class="dm-form-label">計測日</label><input type="date" name="date" class="dm-input" value="{{ today_str }}"></div>
+          <div><label class="dm-form-label">身長 (cm)</label><input type="number" step=".1" name="height" class="dm-input" placeholder="175.0"></div>
+          <div><label class="dm-form-label">体重 (kg)</label><input type="number" step=".1" name="weight" class="dm-input" placeholder="70.0"></div>
+          <div><label class="dm-form-label">50m走 (秒)</label><input type="number" step=".01" name="sprint_50m" class="dm-input" placeholder="6.80"></div>
+          <div><label class="dm-form-label">遠投 (m)</label><input type="number" step=".1" name="throw_distance" class="dm-input" placeholder="80"></div>
+          <div><label class="dm-form-label">握力右 (kg)</label><input type="number" step=".1" name="grip_r" class="dm-input" placeholder="45"></div>
+          <div><label class="dm-form-label">握力左 (kg)</label><input type="number" step=".1" name="grip_l" class="dm-input" placeholder="40"></div>
+          <div><label class="dm-form-label">立幅跳 (cm)</label><input type="number" step=".1" name="standing_jump" class="dm-input" placeholder="230"></div>
+          <div><label class="dm-form-label">走幅跳 (cm)</label><input type="number" step=".1" name="broad_jump" class="dm-input" placeholder="450"></div>
+          <div style="grid-column:1/-1;"><label class="dm-form-label">メモ</label><input type="text" name="notes" class="dm-input" placeholder="コメント"></div>
+        </div>
+        <button type="submit" class="btn-dm btn-sm-dm"><i class="bi bi-save"></i> 保存</button>
+      </form>
+    </div>
+
+    {% if physical_list %}
+      {% set l = physical_list[0] %}
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:10px;margin-bottom:20px;">
+        {% if l.height %}<div class="dm-stat"><div class="dm-stat-value">{{ l.height }}</div><div class="dm-stat-label">身長 cm</div></div>{% endif %}
+        {% if l.weight %}<div class="dm-stat"><div class="dm-stat-value">{{ l.weight }}</div><div class="dm-stat-label">体重 kg</div></div>{% endif %}
+        {% if l.sprint_50m %}<div class="dm-stat"><div class="dm-stat-value">{{ l.sprint_50m }}</div><div class="dm-stat-label">50m走 秒</div></div>{% endif %}
+        {% if l.throw_distance %}<div class="dm-stat"><div class="dm-stat-value">{{ l.throw_distance }}</div><div class="dm-stat-label">遠投 m</div></div>{% endif %}
+        {% if l.standing_jump %}<div class="dm-stat"><div class="dm-stat-value">{{ l.standing_jump }}</div><div class="dm-stat-label">立幅跳 cm</div></div>{% endif %}
+        {% if l.grip_r %}<div class="dm-stat"><div class="dm-stat-value">{{ l.grip_r }}</div><div class="dm-stat-label">握力右 kg</div></div>{% endif %}
+      </div>
+      {% if physical_list|length > 1 %}
+      <canvas id="physChart" height="100" style="margin-bottom:16px;"></canvas>
+      {% endif %}
+      <details><summary style="font-size:.78rem;color:var(--dm-muted);cursor:pointer;margin-bottom:8px;">履歴 ({{ physical_list|length }}件)</summary>
+      <div style="overflow-x:auto;">
+        <table class="dm-table"><thead><tr><th>日付</th><th>身長</th><th>体重</th><th>50m</th><th>遠投</th><th>立幅跳</th><th>握力R</th></tr></thead>
+        <tbody>{% for d in physical_list %}<tr><td>{{ d.date }}</td><td>{{ d.height or '—' }}</td><td>{{ d.weight or '—' }}</td><td>{{ d.sprint_50m or '—' }}</td><td>{{ d.throw_distance or '—' }}</td><td>{{ d.standing_jump or '—' }}</td><td>{{ d.grip_r or '—' }}</td></tr>{% endfor %}</tbody>
+        </table>
+      </div></details>
+    {% else %}
+    <div style="text-align:center;padding:32px;color:var(--dm-muted);font-size:.83rem;">
+      <i class="bi bi-bar-chart" style="font-size:2rem;display:block;margin-bottom:8px;opacity:.3;"></i>
+      データなし
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ── INBODY ── -->
+  <div id="inbody" class="dm-tab-pane" style="padding:20px;">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:14px;">
+      <button class="btn-dm-outline btn-sm-dm collapse-toggle" data-target="inbody-form">
+        <i class="bi bi-plus"></i> データ追加
+      </button>
+    </div>
+    <div id="inbody-form" style="display:none;background:var(--dm-light);border-radius:8px;padding:16px;margin-bottom:16px;">
+      <form method="POST" action="{{ url_for('add_inbody', pid=player.id) }}">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:10px;">
+          <div><label class="dm-form-label">計測日</label><input type="date" name="date" class="dm-input" value="{{ today_str }}"></div>
+          <div><label class="dm-form-label">体重 (kg)</label><input type="number" step=".1" name="weight" class="dm-input"></div>
+          <div><label class="dm-form-label">骨格筋量 (kg)</label><input type="number" step=".1" name="skeletal_muscle_mass" class="dm-input"></div>
+          <div><label class="dm-form-label">体脂肪量 (kg)</label><input type="number" step=".1" name="body_fat_mass" class="dm-input"></div>
+          <div><label class="dm-form-label">体脂肪率 (%)</label><input type="number" step=".1" name="body_fat_pct" class="dm-input"></div>
+          <div><label class="dm-form-label">BMI</label><input type="number" step=".1" name="bmi" class="dm-input"></div>
+          <div><label class="dm-form-label">基礎代謝 (kcal)</label><input type="number" name="basal_metabolic_rate" class="dm-input"></div>
+          <div><label class="dm-form-label">内臓脂肪レベル</label><input type="number" step=".1" name="visceral_fat" class="dm-input"></div>
+          <div><label class="dm-form-label">体水分量 (L)</label><input type="number" step=".1" name="total_body_water" class="dm-input"></div>
+          <div><label class="dm-form-label">タンパク質 (kg)</label><input type="number" step=".1" name="protein" class="dm-input"></div>
+          <div><label class="dm-form-label">ミネラル (kg)</label><input type="number" step=".1" name="mineral" class="dm-input"></div>
+          <div style="grid-column:1/-1;font-size:.72rem;color:var(--dm-muted);letter-spacing:.05em;padding-top:4px;">部位別筋肉量</div>
+          <div><label class="dm-form-label">右腕 (kg)</label><input type="number" step=".01" name="right_arm_muscle" class="dm-input"></div>
+          <div><label class="dm-form-label">左腕 (kg)</label><input type="number" step=".01" name="left_arm_muscle" class="dm-input"></div>
+          <div><label class="dm-form-label">体幹 (kg)</label><input type="number" step=".1" name="trunk_muscle" class="dm-input"></div>
+          <div><label class="dm-form-label">右足 (kg)</label><input type="number" step=".1" name="right_leg_muscle" class="dm-input"></div>
+          <div><label class="dm-form-label">左足 (kg)</label><input type="number" step=".1" name="left_leg_muscle" class="dm-input"></div>
+          <div style="grid-column:1/-1;"><label class="dm-form-label">メモ</label><input type="text" name="notes" class="dm-input"></div>
+        </div>
+        <button type="submit" class="btn-dm btn-sm-dm"><i class="bi bi-save"></i> 保存</button>
+      </form>
+    </div>
+    {% if inbody_list %}
+      {% set ib = inbody_list[0] %}
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;margin-bottom:20px;">
+        {% if ib.weight %}<div class="dm-stat"><div class="dm-stat-value">{{ ib.weight }}</div><div class="dm-stat-label">体重 kg</div></div>{% endif %}
+        {% if ib.skeletal_muscle_mass %}<div class="dm-stat"><div class="dm-stat-value">{{ ib.skeletal_muscle_mass }}</div><div class="dm-stat-label">骨格筋量 kg</div></div>{% endif %}
+        {% if ib.body_fat_pct %}<div class="dm-stat"><div class="dm-stat-value">{{ ib.body_fat_pct }}</div><div class="dm-stat-label">体脂肪率 %</div></div>{% endif %}
+        {% if ib.bmi %}<div class="dm-stat"><div class="dm-stat-value">{{ ib.bmi }}</div><div class="dm-stat-label">BMI</div></div>{% endif %}
+        {% if ib.basal_metabolic_rate %}<div class="dm-stat"><div class="dm-stat-value">{{ ib.basal_metabolic_rate }}</div><div class="dm-stat-label">基礎代謝 kcal</div></div>{% endif %}
+        {% if ib.visceral_fat %}<div class="dm-stat"><div class="dm-stat-value">{{ ib.visceral_fat }}</div><div class="dm-stat-label">内臓脂肪</div></div>{% endif %}
+      </div>
+      {% if ib.right_arm_muscle or ib.left_arm_muscle or ib.trunk_muscle %}
+      <div style="font-size:.78rem;font-weight:700;margin-bottom:10px;color:var(--dm-muted);letter-spacing:.05em;">部位別筋肉量 (最新)</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;">
+        {% for label, val in [('右腕', ib.right_arm_muscle),('左腕', ib.left_arm_muscle),('体幹', ib.trunk_muscle),('右足', ib.right_leg_muscle),('左足', ib.left_leg_muscle)] %}
+        {% if val %}<div class="dm-stat" style="min-width:80px;"><div class="dm-stat-value" style="font-size:1.2rem;">{{ val }}</div><div class="dm-stat-label">{{ label }} kg</div></div>{% endif %}
+        {% endfor %}
+      </div>
+      {% endif %}
+      <details><summary style="font-size:.78rem;color:var(--dm-muted);cursor:pointer;margin-bottom:8px;">履歴 ({{ inbody_list|length }}件)</summary>
+      <div style="overflow-x:auto;">
+        <table class="dm-table"><thead><tr><th>日付</th><th>体重</th><th>骨格筋量</th><th>体脂肪率</th><th>BMI</th><th>基礎代謝</th></tr></thead>
+        <tbody>{% for d in inbody_list %}<tr><td>{{ d.date }}</td><td>{{ d.weight or '—' }}</td><td>{{ d.skeletal_muscle_mass or '—' }}</td><td>{{ d.body_fat_pct or '—' }}</td><td>{{ d.bmi or '—' }}</td><td>{{ d.basal_metabolic_rate or '—' }}</td></tr>{% endfor %}</tbody>
+        </table>
+      </div></details>
+    {% else %}
+    <div style="text-align:center;padding:32px;color:var(--dm-muted);font-size:.83rem;">
+      <i class="bi bi-heart-pulse" style="font-size:2rem;display:block;margin-bottom:8px;opacity:.3;"></i>InBodyデータなし
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ── RAPSODO ── -->
+  <div id="rapsodo" class="dm-tab-pane" style="padding:20px;">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:14px;">
+      <button class="btn-dm-outline btn-sm-dm collapse-toggle" data-target="rapsodo-form">
+        <i class="bi bi-plus"></i> データ追加
+      </button>
+    </div>
+    <div id="rapsodo-form" style="display:none;background:var(--dm-light);border-radius:8px;padding:16px;margin-bottom:16px;">
+      <form method="POST" action="{{ url_for('add_rapsodo', pid=player.id) }}">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:10px;">
+          <div><label class="dm-form-label">計測日</label><input type="date" name="date" class="dm-input" value="{{ today_str }}"></div>
+          <div>
+            <label class="dm-form-label">球種</label>
+            <select name="pitch_type" class="dm-input">
+              {% for pt in pitch_types %}<option>{{ pt }}</option>{% endfor %}
+            </select>
+          </div>
+          <div><label class="dm-form-label">球速 (km/h)</label><input type="number" step=".1" name="velocity_kmh" class="dm-input" placeholder="145.0"></div>
+          <div><label class="dm-form-label">回転数 (rpm)</label><input type="number" name="spin_rate" class="dm-input" placeholder="2400"></div>
+          <div><label class="dm-form-label">回転効率 (%)</label><input type="number" step=".1" name="spin_efficiency" class="dm-input" placeholder="85.0"></div>
+          <div><label class="dm-form-label">回転軸 (°)</label><input type="number" name="spin_axis" class="dm-input" placeholder="210"></div>
+          <div><label class="dm-form-label">縦変化量 (cm)</label><input type="number" step=".1" name="vert_break" class="dm-input"></div>
+          <div><label class="dm-form-label">横変化量 (cm)</label><input type="number" step=".1" name="horz_break" class="dm-input"></div>
+          <div><label class="dm-form-label">リリース高さ (m)</label><input type="number" step=".01" name="release_height" class="dm-input"></div>
+          <div><label class="dm-form-label">リリース横位置 (m)</label><input type="number" step=".01" name="release_side" class="dm-input"></div>
+          <div><label class="dm-form-label">リリース距離 (m)</label><input type="number" step=".01" name="release_extension" class="dm-input"></div>
+          <div><label class="dm-form-label">ストライク率 (%)</label><input type="number" step=".1" name="strike_pct" class="dm-input"></div>
+          <div><label class="dm-form-label">球数</label><input type="number" name="pitch_count" class="dm-input"></div>
+          <div style="grid-column:1/-1;"><label class="dm-form-label">メモ</label><input type="text" name="notes" class="dm-input"></div>
+        </div>
+        <button type="submit" class="btn-dm btn-sm-dm"><i class="bi bi-save"></i> 保存</button>
+      </form>
+    </div>
+    {% if rapsodo_list %}
+    <div style="overflow-x:auto;">
+      <table class="dm-table">
+        <thead><tr><th>日付</th><th>球種</th><th>球速</th><th>回転数</th><th>回転効率</th><th>回転軸</th><th>縦変化</th><th>横変化</th><th>ストライク%</th></tr></thead>
+        <tbody>
+          {% for d in rapsodo_list %}
+          <tr>
+            <td>{{ d.date }}</td>
+            <td><span style="font-size:.72rem;background:var(--dm-light);padding:2px 6px;border-radius:4px;font-weight:600;">{{ d.pitch_type or '—' }}</span></td>
+            <td><strong>{{ d.velocity_kmh or '—' }}</strong></td>
+            <td>{{ d.spin_rate or '—' }}</td>
+            <td>{{ d.spin_efficiency or '—' }}</td>
+            <td>{{ d.spin_axis or '—' }}</td>
+            <td>{{ d.vert_break or '—' }}</td>
+            <td>{{ d.horz_break or '—' }}</td>
+            <td>{{ d.strike_pct or '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:32px;color:var(--dm-muted);font-size:.83rem;">
+      <i class="bi bi-speedometer" style="font-size:2rem;display:block;margin-bottom:8px;opacity:.3;"></i>Rapsodoデータなし
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ── VALD ── -->
+  <div id="vald" class="dm-tab-pane" style="padding:20px;">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:14px;">
+      <button class="btn-dm-outline btn-sm-dm collapse-toggle" data-target="vald-form">
+        <i class="bi bi-plus"></i> データ追加
+      </button>
+    </div>
+
+    <!-- Dynamic VALD Form -->
+    <div id="vald-form" style="display:none;background:var(--dm-light);border-radius:8px;padding:16px;margin-bottom:16px;">
+      <form method="POST" action="{{ url_for('add_vald', pid=player.id) }}">
+        <!-- 共通：日付 + テスト種別 -->
+        <div style="display:grid;grid-template-columns:160px 1fr;gap:10px;margin-bottom:14px;">
+          <div>
+            <label class="dm-form-label">計測日</label>
+            <input type="date" name="date" class="dm-input" value="{{ today_str }}">
+          </div>
+          <div>
+            <label class="dm-form-label">テスト種別</label>
+            <select name="test_type" class="dm-input" id="vald-type-select">
+              {% for t in vald_tests %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <!-- ── GROUP A: CMJ / SQJ / Single Leg Jump ── -->
+        <div id="vg-cmj" class="vald-group" style="display:none;">
+          <div style="font-size:.7rem;letter-spacing:.1em;color:var(--dm-muted);margin-bottom:10px;padding-bottom:4px;border-bottom:1px solid var(--dm-border);">
+            JUMP METRICS
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:10px;">
+            <div><label class="dm-form-label">ジャンプ高さ (cm)</label><input type="number" step=".1" name="jump_height" class="dm-input" placeholder="45.2"></div>
+            <div><label class="dm-form-label">ピーク力・両脚 (N)</label><input type="number" step=".1" name="peak_force" class="dm-input"></div>
+            <div><label class="dm-form-label">体重比ピーク力 (N/kg)</label><input type="number" step=".01" name="relative_peak_force" class="dm-input"></div>
+            <div><label class="dm-form-label">離心性ピーク力 (N)</label><input type="number" step=".1" name="eccentric_peak_force" class="dm-input"></div>
+            <div><label class="dm-form-label">求心性インパルス (N·s)</label><input type="number" step=".1" name="concentric_impulse" class="dm-input"></div>
+            <div><label class="dm-form-label">RFD (N/s)</label><input type="number" step=".1" name="rfd" class="dm-input"></div>
+            <div><label class="dm-form-label">離地速度 (m/s)</label><input type="number" step=".01" name="takeoff_velocity" class="dm-input"></div>
+            <div><label class="dm-form-label">ピークパワー (W)</label><input type="number" step=".1" name="peak_power" class="dm-input"></div>
+            <div><label class="dm-form-label">RSI</label><input type="number" step=".01" name="rsi" class="dm-input"></div>
+            <div><label class="dm-form-label">左右差 (%)</label><input type="number" step=".1" name="asymmetry_pct" class="dm-input"></div>
+          </div>
+        </div>
+
+        <!-- ── GROUP B: Single Leg Jump（片脚別） ── -->
+        <div id="vg-single" class="vald-group" style="display:none;">
+          <div style="font-size:.7rem;letter-spacing:.1em;color:var(--dm-muted);margin-bottom:10px;padding-bottom:4px;border-bottom:1px solid var(--dm-border);">
+            SINGLE LEG — LEFT / RIGHT
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:10px;">
+            <div><label class="dm-form-label">ジャンプ高さ 左 (cm)</label><input type="number" step=".1" name="jump_height_left" class="dm-input"></div>
+            <div><label class="dm-form-label">ジャンプ高さ 右 (cm)</label><input type="number" step=".1" name="jump_height_right" class="dm-input"></div>
+            <div><label class="dm-form-label">ピーク力 左 (N)</label><input type="number" step=".1" name="peak_force_left" class="dm-input"></div>
+            <div><label class="dm-form-label">ピーク力 右 (N)</label><input type="number" step=".1" name="peak_force_right" class="dm-input"></div>
+            <div><label class="dm-form-label">体重比 左 (N/kg)</label><input type="number" step=".01" name="relative_force_left" class="dm-input"></div>
+            <div><label class="dm-form-label">体重比 右 (N/kg)</label><input type="number" step=".01" name="relative_force_right" class="dm-input"></div>
+            <div><label class="dm-form-label">RSI 左</label><input type="number" step=".01" name="rsi" class="dm-input"></div>
+            <div><label class="dm-form-label">左右差 (%)</label><input type="number" step=".1" name="asymmetry_pct" class="dm-input"></div>
+          </div>
+        </div>
+
+        <!-- ── GROUP C: Hop Test ── -->
+        <div id="vg-hop" class="vald-group" style="display:none;">
+          <div style="font-size:.7rem;letter-spacing:.1em;color:var(--dm-muted);margin-bottom:10px;padding-bottom:4px;border-bottom:1px solid var(--dm-border);">
+            HOP TEST METRICS
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:10px;">
+            <div>
+              <label class="dm-form-label">計測脚</label>
+              <select name="hop_leg" class="dm-input">
+                <option value="Left">左 (Left)</option>
+                <option value="Right">右 (Right)</option>
+              </select>
+            </div>
+            <div><label class="dm-form-label">ジャンプ高さ (cm)</label><input type="number" step=".1" name="jump_height" class="dm-input"></div>
+            <div><label class="dm-form-label">RSI</label><input type="number" step=".01" name="rsi" class="dm-input"></div>
+            <div><label class="dm-form-label">接地時間 (ms)</label><input type="number" step=".1" name="contact_time_ms" class="dm-input"></div>
+            <div><label class="dm-form-label">滞空時間 (ms)</label><input type="number" step=".1" name="flight_time_ms" class="dm-input"></div>
+            <div><label class="dm-form-label">左右差 (%)</label><input type="number" step=".1" name="asymmetry_pct" class="dm-input"></div>
+          </div>
+        </div>
+
+        <!-- ── GROUP D: Shoulder ISO (T / Y / I) ── -->
+        <div id="vg-iso" class="vald-group" style="display:none;">
+          <div style="font-size:.7rem;letter-spacing:.1em;color:var(--dm-muted);margin-bottom:10px;padding-bottom:4px;border-bottom:1px solid var(--dm-border);">
+            SHOULDER ISOMETRIC — LEFT / RIGHT
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:10px;">
+            <div><label class="dm-form-label">筋力 左 (N)</label><input type="number" step=".1" name="iso_force_left" class="dm-input"></div>
+            <div><label class="dm-form-label">筋力 右 (N)</label><input type="number" step=".1" name="iso_force_right" class="dm-input"></div>
+            <div><label class="dm-form-label">体重比 左 (N/kg)</label><input type="number" step=".01" name="iso_relative_left" class="dm-input"></div>
+            <div><label class="dm-form-label">体重比 右 (N/kg)</label><input type="number" step=".01" name="iso_relative_right" class="dm-input"></div>
+            <div><label class="dm-form-label">左右差 (%)</label><input type="number" step=".1" name="asymmetry_pct" class="dm-input"></div>
+          </div>
+        </div>
+
+        <!-- メモ（共通） -->
+        <div style="margin-top:4px;">
+          <label class="dm-form-label">メモ</label>
+          <input type="text" name="notes" class="dm-input" placeholder="備考・コメント">
+        </div>
+
+        <div style="margin-top:12px;">
+          <button type="submit" class="btn-dm btn-sm-dm"><i class="bi bi-save"></i> 保存</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- 一覧テーブル（テスト種別ごとに適切な列を表示） -->
+    {% if vald_list %}
+
+    <!-- Jump系まとめ -->
+    {% set jump_rows = vald_list | selectattr('test_type', 'in', ['Countermovement Jump','Squat Jump','Single Leg Jump']) | list %}
+    {% set hop_rows  = vald_list | selectattr('test_type', 'equalto', 'Hop Test') | list %}
+    {% set iso_rows  = vald_list | selectattr('test_type', 'in', ['Shoulder ISO-T','Shoulder ISO-Y','Shoulder ISO-I']) | list %}
+
+    {% if jump_rows %}
+    <div style="font-size:.72rem;font-weight:700;letter-spacing:.08em;color:var(--dm-muted);margin-bottom:6px;">JUMP</div>
+    <div style="overflow-x:auto;margin-bottom:16px;">
+      <table class="dm-table">
+        <thead><tr><th>日付</th><th>種別</th><th>高さ cm</th><th>L cm</th><th>R cm</th><th>力 N</th><th>体重比</th><th>RSI</th><th>左右差</th><th>RFD</th></tr></thead>
+        <tbody>
+          {% for d in jump_rows %}
+          <tr>
+            <td>{{ d.date }}</td>
+            <td>
+              <span style="font-size:.68rem;background:var(--dm-navy);color:#fff;padding:2px 6px;border-radius:4px;font-weight:600;white-space:nowrap;">{{ d.test_type|replace('Countermovement Jump','CMJ')|replace('Squat Jump','SQJ')|replace('Single Leg Jump','SLJ') }}</span>
+            </td>
+            <td><strong>{{ d.jump_height or '—' }}</strong></td>
+            <td>{{ d.jump_height_left or '—' }}</td>
+            <td>{{ d.jump_height_right or '—' }}</td>
+            <td>{{ d.peak_force or '—' }}</td>
+            <td>{{ d.relative_peak_force or '—' }}</td>
+            <td>{{ d.rsi or '—' }}</td>
+            <td>{% if d.asymmetry_pct %}<span style="color:{% if d.asymmetry_pct|float>10%}#dc2626{% elif d.asymmetry_pct|float>5%}#d97706{% else %}#16a34a{% endif %};">{{ d.asymmetry_pct }}%</span>{% else %}—{% endif %}</td>
+            <td>{{ d.rfd or '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+
+    {% if hop_rows %}
+    <div style="font-size:.72rem;font-weight:700;letter-spacing:.08em;color:var(--dm-muted);margin-bottom:6px;">HOP TEST</div>
+    <div style="overflow-x:auto;margin-bottom:16px;">
+      <table class="dm-table">
+        <thead><tr><th>日付</th><th>脚</th><th>高さ cm</th><th>RSI</th><th>接地 ms</th><th>滞空 ms</th><th>左右差</th></tr></thead>
+        <tbody>
+          {% for d in hop_rows %}
+          <tr>
+            <td>{{ d.date }}</td>
+            <td>{{ d.hop_leg or '—' }}</td>
+            <td><strong>{{ d.jump_height or '—' }}</strong></td>
+            <td>{{ d.rsi or '—' }}</td>
+            <td>{{ d.contact_time_ms or '—' }}</td>
+            <td>{{ d.flight_time_ms or '—' }}</td>
+            <td>{% if d.asymmetry_pct %}<span style="color:{% if d.asymmetry_pct|float>10%}#dc2626{% elif d.asymmetry_pct|float>5%}#d97706{% else %}#16a34a{% endif %};">{{ d.asymmetry_pct }}%</span>{% else %}—{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+
+    {% if iso_rows %}
+    <div style="font-size:.72rem;font-weight:700;letter-spacing:.08em;color:var(--dm-muted);margin-bottom:6px;">SHOULDER ISO</div>
+    <div style="overflow-x:auto;margin-bottom:16px;">
+      <table class="dm-table">
+        <thead><tr><th>日付</th><th>種別</th><th>左 N</th><th>右 N</th><th>左 N/kg</th><th>右 N/kg</th><th>左右差</th></tr></thead>
+        <tbody>
+          {% for d in iso_rows %}
+          <tr>
+            <td>{{ d.date }}</td>
+            <td><span style="font-size:.68rem;background:#ede9fe;color:#5b21b6;padding:2px 6px;border-radius:4px;font-weight:600;">{{ d.test_type }}</span></td>
+            <td>{{ d.iso_force_left or '—' }}</td>
+            <td>{{ d.iso_force_right or '—' }}</td>
+            <td>{{ d.iso_relative_left or '—' }}</td>
+            <td>{{ d.iso_relative_right or '—' }}</td>
+            <td>{% if d.asymmetry_pct %}<span style="color:{% if d.asymmetry_pct|float>10%}#dc2626{% elif d.asymmetry_pct|float>5%}#d97706{% else %}#16a34a{% endif %};">{{ d.asymmetry_pct }}%</span>{% else %}—{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div style="text-align:center;padding:32px;color:var(--dm-muted);font-size:.83rem;">
+      <i class="bi bi-activity" style="font-size:2rem;display:block;margin-bottom:8px;opacity:.3;"></i>VALDデータなし
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ── DRILLS ── -->
+  <div id="drills" class="dm-tab-pane" style="padding:20px;">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:14px;">
+      <button class="btn-dm-outline btn-sm-dm collapse-toggle" data-target="assign-form">
+        <i class="bi bi-plus"></i> ドリルを割り当て
+      </button>
+    </div>
+    <div id="assign-form" style="display:none;background:var(--dm-light);border-radius:8px;padding:16px;margin-bottom:16px;">
+      <form method="POST" action="{{ url_for('assign_drill', pid=player.id) }}">
+        <div style="display:grid;gap:10px;margin-bottom:10px;">
+          <div>
+            <label class="dm-form-label">ドリルを選択</label>
+            <select name="drill_id" class="dm-input" required>
+              <option value="">選択してください</option>
+              {% for d in all_drills %}
+              <option value="{{ d.id }}" {% if d.id in assigned_ids %}disabled{% endif %}>
+                [{{ d.category }}] {{ d.title }}{% if d.id in assigned_ids %} ✓割当済{% endif %}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="dm-form-label">コーチメモ（任意）</label>
+            <input type="text" name="coach_note" class="dm-input" placeholder="この選手への注意点など">
+          </div>
+        </div>
+        <button type="submit" class="btn-dm btn-sm-dm"><i class="bi bi-check2"></i> 割り当てる</button>
+      </form>
+    </div>
+    {% if assignments %}
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      {% for a in assignments %}
+      <div style="display:flex;align-items:center;gap:12px;background:var(--dm-light);border-radius:8px;padding:12px 14px;">
+        <span class="cat-badge cat-{{ a.drill.category }}">{{ a.drill.category }}</span>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:700;font-size:.85rem;">{{ a.drill.title }}</div>
+          {% if a.coach_note %}<div style="font-size:.75rem;color:var(--dm-blue);margin-top:2px;">{{ a.coach_note }}</div>{% endif %}
+        </div>
+        <form method="POST" action="{{ url_for('unassign_drill', pid=player.id, aid=a.id) }}" style="flex-shrink:0;">
+          <button type="submit" style="background:none;border:1px solid #fca5a5;color:#dc2626;border-radius:4px;padding:3px 8px;font-size:.72rem;cursor:pointer;"
+                  onclick="return confirm('割り当てを解除しますか？')">解除</button>
+        </form>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:32px;color:var(--dm-muted);font-size:.83rem;">
+      <i class="bi bi-journal-x" style="font-size:2rem;display:block;margin-bottom:8px;opacity:.3;"></i>ドリル未割り当て
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ── ISSUES ── -->
+  <div id="issues" class="dm-tab-pane" style="padding:20px;">
+
+    <!-- 最優先課題（選手に直接表示されるメッセージ） -->
+    <div style="background:linear-gradient(135deg,#0b1930,#162850);border-radius:10px;padding:16px;margin-bottom:16px;">
+      <div style="font-size:.68rem;letter-spacing:.12em;color:rgba(255,255,255,.4);margin-bottom:10px;font-weight:700;">
+        <i class="bi bi-megaphone me-1"></i>最優先課題 — 選手のトップ画面に表示されます
+      </div>
+      <form method="POST" action="{{ url_for('set_priority_note', pid=player.id) }}">
+        <textarea name="priority_note" rows="3"
+          style="width:100%;background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.15);
+                 border-radius:8px;padding:10px 12px;color:#fff;font-size:.88rem;resize:vertical;
+                 outline:none;transition:.2s;font-family:inherit;"
+          placeholder="例：体幹の安定性を最優先で取り組んでください。スクワットとプランクを毎日実施すること。"
+          onfocus="this.style.borderColor='#2563eb'" onblur="this.style.borderColor='rgba(255,255,255,.15)'"
+        >{{ player.priority_note or '' }}</textarea>
+        <div style="display:flex;justify-content:flex-end;margin-top:8px;">
+          <button type="submit" class="btn-dm btn-sm-dm">
+            <i class="bi bi-megaphone"></i> 更新して選手に反映
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- 課題追加フォーム -->
+    <div style="display:flex;justify-content:flex-end;margin-bottom:14px;">
+      <button class="btn-dm-outline btn-sm-dm collapse-toggle" data-target="issue-form">
+        <i class="bi bi-plus"></i> 課題タグを追加
+      </button>
+    </div>
+    <div id="issue-form" style="display:none;background:var(--dm-light);border-radius:8px;padding:16px;margin-bottom:16px;">
+      <form method="POST" action="{{ url_for('add_issue', pid=player.id) }}">
+        <div style="display:grid;gap:10px;margin-bottom:10px;">
+          <div>
+            <label class="dm-form-label">課題タグ <span style="color:#ef4444;">*</span></label>
+            <input type="text" name="tag" class="dm-input" required placeholder="例: 体幹不足 / 球速アップ" list="issue-sug">
+            <datalist id="issue-sug">
+              <option>体幹不足</option><option>下半身強化</option><option>肩の可動域</option>
+              <option>フォーム改善</option><option>走塁スピード</option><option>バットコントロール</option>
+              <option>球速アップ</option><option>守備範囲</option><option>メンタル強化</option>
+              <option>左右差改善</option><option>体重管理</option>
+            </datalist>
+          </div>
+          <div>
+            <label class="dm-form-label">詳細（任意）</label>
+            <textarea name="description" class="dm-input" rows="2" placeholder="具体的な状況や改善方針"></textarea>
+          </div>
+        </div>
+        <button type="submit" class="btn-dm btn-sm-dm"><i class="bi bi-plus"></i> 追加</button>
+      </form>
+    </div>
+    {% if issues %}
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      {% for iss in issues %}
+      <div style="display:flex;align-items:flex-start;gap:12px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 14px;">
+        <i class="bi bi-exclamation-circle-fill" style="color:#dc2626;margin-top:2px;flex-shrink:0;"></i>
+        <div style="flex:1;">
+          <div style="font-weight:700;font-size:.85rem;">{{ iss.tag }}</div>
+          {% if iss.description %}<div style="font-size:.78rem;color:var(--dm-muted);margin-top:3px;">{{ iss.description }}</div>{% endif %}
+          <div style="font-size:.7rem;color:var(--dm-muted);margin-top:4px;">{{ iss.created_at.strftime('%Y/%m/%d') }}</div>
+        </div>
+        <form method="POST" action="{{ url_for('resolve_issue', pid=player.id, iid=iss.id) }}" style="flex-shrink:0;">
+          <button type="submit" style="background:none;border:1px solid #86efac;color:#16a34a;border-radius:4px;padding:3px 8px;font-size:.72rem;cursor:pointer;">解決済み</button>
+        </form>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:32px;color:var(--dm-muted);font-size:.83rem;">
+      <i class="bi bi-check-circle" style="font-size:2rem;display:block;margin-bottom:8px;opacity:.3;color:#16a34a;"></i>課題なし
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ── FEEDBACK ── -->
+  <div id="feedback" class="dm-tab-pane" style="padding:20px;">
+    <!-- 送信フォーム -->
+    <div style="background:linear-gradient(135deg,#0b1930,#162850);border-radius:10px;padding:16px;margin-bottom:16px;">
+      <div style="font-size:.68rem;letter-spacing:.12em;color:rgba(255,255,255,.4);margin-bottom:10px;font-weight:700;">
+        <i class="bi bi-chat-left-text me-1"></i>フィードバックを送る
+      </div>
+      <form method="POST" action="{{ url_for('add_feedback', pid=player.id) }}">
+        <textarea name="content" rows="3" required
+          style="width:100%;background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.15);
+                 border-radius:8px;padding:10px 12px;color:#fff;font-size:.88rem;resize:vertical;
+                 outline:none;font-family:inherit;"
+          placeholder="選手へのフィードバックを入力してください..."
+          onfocus="this.style.borderColor='#2563eb'" onblur="this.style.borderColor='rgba(255,255,255,.15)'"
+        ></textarea>
+        <div style="display:flex;justify-content:flex-end;margin-top:8px;">
+          <button type="submit" class="btn-dm btn-sm-dm">
+            <i class="bi bi-send"></i> 送信
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- フィードバック履歴 -->
+    {% if feedbacks %}
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      {% for fb in feedbacks %}
+      <div style="border-radius:8px;padding:12px 14px;border:1px solid var(--dm-border);background:var(--dm-light);">
+        <div style="font-size:.68rem;color:var(--dm-muted);margin-bottom:6px;display:flex;justify-content:space-between;">
+          <span>{{ fb.created_at.strftime('%Y/%m/%d %H:%M') }}</span>
+          <span style="background:{% if fb.is_read %}#d1fae5{% else %}#dbeafe{% endif %};
+                       color:{% if fb.is_read %}#065f46{% else %}#1e40af{% endif %};
+                       padding:1px 7px;border-radius:8px;font-size:.65rem;font-weight:700;">
+            {{ '既読' if fb.is_read else '未読' }}
+          </span>
+        </div>
+        <div style="font-size:.88rem;color:var(--dm-text);line-height:1.6;white-space:pre-line;">{{ fb.content }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:32px;color:var(--dm-muted);font-size:.83rem;">
+      <i class="bi bi-chat-left" style="font-size:2rem;display:block;margin-bottom:8px;opacity:.3;"></i>
+      まだフィードバックはありません
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ── PLAYER VIDEOS ── -->
+  <div id="player-videos" class="dm-tab-pane" style="padding:20px;">
+    {% if player_videos %}
+    <div style="display:grid;gap:14px;">
+      {% for v in player_videos %}
+      <div style="border:1px solid var(--dm-border);border-radius:10px;overflow:hidden;">
+        {% if v.video_file %}
+        <video controls style="width:100%;max-height:240px;background:#000;display:block;">
+          <source src="{{ url_for('uploaded_file', filepath=v.video_file) }}">
+        </video>
+        {% elif v.youtube_url %}
+        {% set eid = v.youtube_url | replace('https://youtu.be/','') | replace('https://www.youtube.com/watch?v=','') %}
+        <div style="position:relative;padding-bottom:56.25%;height:0;">
+          <iframe src="https://www.youtube.com/embed/{{ eid.split('&')[0] }}"
+                  style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;" allowfullscreen></iframe>
+        </div>
+        {% endif %}
+        <div style="padding:12px 14px;">
+          <div style="font-weight:700;font-size:.9rem;margin-bottom:2px;">{{ v.title }}</div>
+          <div style="font-size:.7rem;color:var(--dm-muted);">{{ v.uploaded_at.strftime('%Y/%m/%d %H:%M') }}</div>
+          {% if v.notes %}
+          <div style="font-size:.78rem;margin-top:6px;padding:8px;background:var(--dm-light);border-radius:6px;">{{ v.notes }}</div>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:48px 20px;color:var(--dm-muted);">
+      <i class="bi bi-camera-video" style="font-size:2.5rem;display:block;margin-bottom:10px;opacity:.3;"></i>
+      <div style="font-size:.82rem;">選手がまだ動画をアップロードしていません</div>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── VALD dynamic form ──
+const VALD_GROUPS = {
+  'Countermovement Jump': ['vg-cmj'],
+  'Squat Jump':           ['vg-cmj'],
+  'Single Leg Jump':      ['vg-cmj', 'vg-single'],
+  'Hop Test':             ['vg-hop'],
+  'Shoulder ISO-T':       ['vg-iso'],
+  'Shoulder ISO-Y':       ['vg-iso'],
+  'Shoulder ISO-I':       ['vg-iso'],
+  'その他':               ['vg-cmj'],
+};
+function updateValdForm() {
+  const sel = document.getElementById('vald-type-select');
+  if (!sel) return;
+  const active = VALD_GROUPS[sel.value] || ['vg-cmj'];
+  document.querySelectorAll('.vald-group').forEach(g => {
+    g.style.display = active.includes(g.id) ? 'block' : 'none';
+  });
+}
+document.addEventListener('DOMContentLoaded', () => {
+  const sel = document.getElementById('vald-type-select');
+  if (sel) {
+    sel.addEventListener('change', updateValdForm);
+    updateValdForm();
+  }
+});
+</script>
+
+{% if physical_list|length > 1 %}
+<script>
+const labels = {{ physical_list | map(attribute='date') | map('string') | list | reverse | list | tojson }};
+const weights = {{ physical_list | map(attribute='weight') | list | reverse | list | tojson }};
+const sprints = {{ physical_list | map(attribute='sprint_50m') | list | reverse | list | tojson }};
+new Chart(document.getElementById('physChart'), {
+  type: 'line',
+  data: { labels,
+    datasets: [
+      { label: '体重 (kg)', data: weights, borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,.08)', yAxisID: 'y', tension: .3, pointRadius: 3 },
+      { label: '50m走 (秒)', data: sprints, borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,.08)', yAxisID: 'y2', tension: .3, pointRadius: 3 }
+    ]
+  },
+  options: {
+    responsive: true,
+    interaction: { mode: 'index', intersect: false },
+    plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } },
+    scales: {
+      y:  { position: 'left',  title: { display: true, text: 'kg', font: { size: 10 } } },
+      y2: { position: 'right', title: { display: true, text: '秒', font: { size: 10 } }, grid: { drawOnChartArea: false } }
+    }
+  }
+});
+</script>
+{% endif %}
+{% endblock %}

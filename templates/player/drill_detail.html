@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% block title %}{{ assignment.drill.title }} — DIMENSIONING{% endblock %}
+{% block content %}
+<div style="margin-bottom:16px;">
+  <a href="{{ url_for('player_dashboard') }}" style="color:var(--dm-muted);font-size:.78rem;text-decoration:none;">
+    <i class="bi bi-arrow-left me-1"></i>練習メニューに戻る
+  </a>
+</div>
+
+<div class="dm-card">
+  <div class="dm-card-body">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+      <span class="cat-badge cat-{{ assignment.drill.category }} " style="font-size:.8rem;padding:4px 12px;">
+        {{ assignment.drill.category }}
+      </span>
+      {% if assignment.drill.video_file or assignment.drill.youtube_url %}
+      <span style="font-size:.75rem;padding:4px 10px;border-radius:4px;background:#fef3c7;color:#92400e;font-weight:600;">
+        <i class="bi bi-play-fill me-1"></i>動画あり
+      </span>
+      {% endif %}
+    </div>
+
+    <h2 style="font-size:1.2rem;font-weight:800;letter-spacing:.03em;margin-bottom:16px;color:var(--dm-navy);">
+      {{ assignment.drill.title }}
+    </h2>
+
+    {% if assignment.coach_note %}
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:14px 16px;margin-bottom:20px;">
+      <div style="font-size:.72rem;font-weight:700;color:#1e40af;letter-spacing:.08em;margin-bottom:6px;">
+        <i class="bi bi-chat-left-text me-1"></i>COACH NOTE
+      </div>
+      <div style="font-size:.88rem;color:#1e3a8a;">{{ assignment.coach_note }}</div>
+    </div>
+    {% endif %}
+
+    <!-- Video: uploaded file takes priority over YouTube -->
+    {% if assignment.drill.video_file %}
+    <div style="margin-bottom:20px;">
+      <div style="font-size:.72rem;font-weight:700;color:var(--dm-muted);letter-spacing:.08em;margin-bottom:8px;">
+        <i class="bi bi-play-circle me-1"></i>解説動画
+      </div>
+      <video controls style="width:100%;border-radius:8px;background:#000;max-height:400px;">
+        <source src="{{ url_for('uploaded_file', filepath=assignment.drill.video_file) }}" type="video/mp4">
+        お使いのブラウザは動画再生に対応していません。
+      </video>
+    </div>
+    {% elif embed_url %}
+    <div style="margin-bottom:20px;">
+      <div style="font-size:.72rem;font-weight:700;color:var(--dm-muted);letter-spacing:.08em;margin-bottom:8px;">
+        <i class="bi bi-youtube me-1" style="color:#dc2626;"></i>解説動画
+      </div>
+      <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:8px;">
+        <iframe src="{{ embed_url }}" title="{{ assignment.drill.title }}" frameborder="0" allowfullscreen
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                style="position:absolute;top:0;left:0;width:100%;height:100%;"></iframe>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if assignment.drill.description %}
+    <div style="margin-bottom:16px;">
+      <div style="font-size:.72rem;font-weight:700;color:var(--dm-muted);letter-spacing:.08em;margin-bottom:8px;">
+        <i class="bi bi-list-check me-1"></i>やり方・手順
+      </div>
+      <div style="background:var(--dm-light);border-radius:8px;padding:14px 16px;font-size:.88rem;line-height:1.7;white-space:pre-line;">
+        {{ assignment.drill.description }}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if assignment.drill.notes %}
+    <div style="margin-bottom:16px;">
+      <div style="font-size:.72rem;font-weight:700;color:var(--dm-muted);letter-spacing:.08em;margin-bottom:8px;">
+        <i class="bi bi-lightbulb me-1"></i>ポイント
+      </div>
+      <div style="background:#fefce8;border:1px solid #fef08a;border-radius:8px;padding:14px 16px;font-size:.88rem;line-height:1.7;white-space:pre-line;">
+        {{ assignment.drill.notes }}
+      </div>
+    </div>
+    {% endif %}
+
+    <div style="font-size:.72rem;color:var(--dm-muted);border-top:1px solid var(--dm-border);padding-top:12px;margin-top:8px;">
+      <i class="bi bi-calendar3 me-1"></i>割り当て日: {{ assignment.assigned_at.strftime('%Y年%m月%d日') }}
+    </div>
+  </div>
+</div>
+{% endblock %}

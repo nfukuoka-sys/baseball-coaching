@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% block title %}選手を追加 — DIMENSIONING{% endblock %}
+{% block content %}
+<div style="margin-bottom:20px;">
+  <a href="{{ url_for('coach_dashboard') }}" style="color:var(--dm-muted);font-size:.78rem;text-decoration:none;">
+    <i class="bi bi-arrow-left me-1"></i>ダッシュボードに戻る
+  </a>
+  <div class="dm-page-title" style="margin-top:8px;">ADD PLAYER</div>
+</div>
+
+<div class="dm-card" style="max-width:540px;">
+  <div class="dm-card-body">
+    <form method="POST">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+        <div style="grid-column:1/-1;">
+          <label class="dm-form-label">氏名 <span style="color:#ef4444;">*</span></label>
+          <input type="text" name="name" class="dm-input" placeholder="山田 太郎" required>
+        </div>
+        <div>
+          <label class="dm-form-label">ポジション</label>
+          <select name="position" class="dm-input">
+            <option value="">—</option>
+            {% for p in ['投手','捕手','一塁手','二塁手','三塁手','遊撃手','左翼手','中堅手','右翼手'] %}
+            <option>{{ p }}</option>{% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="dm-form-label">利き腕</label>
+          <select name="dominant_hand" class="dm-input">
+            <option value="">—</option>
+            <option>右</option><option>左</option><option>両</option>
+          </select>
+        </div>
+        <div>
+          <label class="dm-form-label">学年・所属</label>
+          <input type="text" name="grade" class="dm-input" placeholder="高校2年">
+        </div>
+        <div>
+          <label class="dm-form-label">チーム名</label>
+          <input type="text" name="team" class="dm-input" placeholder="〇〇高校野球部">
+        </div>
+        <div>
+          <label class="dm-form-label">生まれ年</label>
+          <input type="number" name="born_year" class="dm-input" placeholder="2006" min="1990" max="2020">
+        </div>
+      </div>
+
+      <div style="border-top:1px solid var(--dm-border);padding-top:14px;margin-bottom:14px;">
+        <div style="font-size:.72rem;color:var(--dm-muted);letter-spacing:.05em;margin-bottom:10px;">
+          LOGIN CREDENTIALS
+        </div>
+        <div style="display:grid;gap:12px;">
+          <div>
+            <label class="dm-form-label">メールアドレス <span style="color:#ef4444;">*</span></label>
+            <input type="email" name="email" class="dm-input" placeholder="player@example.com" required>
+          </div>
+          <div>
+            <label class="dm-form-label">初期パスワード <span style="color:#ef4444;">*</span></label>
+            <input type="password" name="password" class="dm-input" placeholder="6文字以上" required minlength="6">
+          </div>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-dm" style="width:100%;">
+        <i class="bi bi-person-plus"></i> 選手を登録する
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}

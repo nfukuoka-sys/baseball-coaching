@@ -1,0 +1,142 @@
+{% extends 'base.html' %}
+{% block title %}ダッシュボード — DIMENSIONING{% endblock %}
+{% block content %}
+<div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:24px;">
+  <div>
+    <div class="dm-page-title">DASHBOARD</div>
+    <div class="dm-page-sub">選手一覧 · 管理</div>
+  </div>
+  <a href="{{ url_for('new_player') }}" class="btn-dm btn-sm-dm">
+    <i class="bi bi-person-plus"></i> 選手を追加
+  </a>
+</div>
+
+<!-- Stats -->
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-bottom:24px;">
+  <div class="dm-stat">
+    <div class="dm-stat-value">{{ total_players }}</div>
+    <div class="dm-stat-label">PLAYERS</div>
+  </div>
+  <div class="dm-stat">
+    <div class="dm-stat-value">{{ drills_count }}</div>
+    <div class="dm-stat-label">DRILLS</div>
+  </div>
+</div>
+
+<!-- Search / Filter -->
+<div class="dm-card" style="margin-bottom:16px;">
+  <div class="dm-card-body" style="padding:14px 20px;">
+    <form method="GET" style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;">
+      <div style="flex:1;min-width:180px;">
+        <label class="dm-form-label">NAME SEARCH</label>
+        <input type="text" name="q" value="{{ q }}" class="dm-input" placeholder="氏名で検索...">
+      </div>
+      <div style="min-width:130px;">
+        <label class="dm-form-label">POSITION</label>
+        <select name="pos" class="dm-input">
+          <option value="">すべて</option>
+          {% for p in positions %}
+          <option value="{{ p }}" {% if pos == p %}selected{% endif %}>{{ p }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div style="min-width:150px;">
+        <label class="dm-form-label">TEAM</label>
+        <select name="team" class="dm-input">
+          <option value="">すべて</option>
+          {% for t in teams %}
+          <option value="{{ t }}" {% if team == t %}selected{% endif %}>{{ t }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="btn-dm btn-sm-dm" style="white-space:nowrap;">
+        <i class="bi bi-search"></i> 検索
+      </button>
+      {% if q or pos or team %}
+      <a href="{{ url_for('coach_dashboard') }}" class="btn-dm-outline btn-sm-dm" style="white-space:nowrap;">クリア</a>
+      {% endif %}
+    </form>
+  </div>
+</div>
+
+<!-- Player list -->
+<div class="dm-card">
+  {% if players %}
+  <table class="dm-table">
+    <thead>
+      <tr>
+        <th>選手</th>
+        <th>ポジション</th>
+        <th style="display:none;" class="d-sm-table-cell">チーム</th>
+        <th>課題</th>
+        <th>ドリル</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in players %}
+      {% set active_issues = p.issues | selectattr('is_resolved','equalto',false) | list %}
+      {% set active_assigns = p.assignments | selectattr('is_active','equalto',true) | list %}
+      <tr style="cursor:pointer;" onclick="location.href='{{ url_for('player_detail', player_id=p.id) }}'">
+        <td>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div class="dm-avatar" style="width:34px;height:34px;font-size:.85rem;background:var(--dm-navy);">{{ p.name[0] }}</div>
+            <div>
+              <div style="font-weight:700;font-size:.85rem;">{{ p.name }}</div>
+              {% if p.grade %}<div style="font-size:.7rem;color:var(--dm-muted);">{{ p.grade }}</div>{% endif %}
+            </div>
+          </div>
+        </td>
+        <td style="font-size:.8rem;">{{ p.position or '—' }}</td>
+        <td style="font-size:.8rem;display:none;" class="d-sm-table-cell">{{ p.team or '—' }}</td>
+        <td>
+          {% if active_issues %}
+          <span style="background:#fee2e2;color:#991b1b;font-size:.7rem;padding:2px 8px;border-radius:10px;font-weight:600;">
+            {{ active_issues|length }}件
+          </span>
+          {% else %}
+          <span style="background:#d1fae5;color:#065f46;font-size:.7rem;padding:2px 8px;border-radius:10px;font-weight:600;">なし</span>
+          {% endif %}
+        </td>
+        <td style="font-size:.8rem;color:var(--dm-muted);">{{ active_assigns|length }}件</td>
+        <td style="text-align:right;">
+          <i class="bi bi-chevron-right" style="color:var(--dm-muted);font-size:.8rem;"></i>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <!-- Pagination -->
+  {% if pagination.pages > 1 %}
+  <div style="padding:14px 20px;border-top:1px solid var(--dm-border);display:flex;justify-content:center;gap:4px;flex-wrap:wrap;">
+    {% if pagination.has_prev %}
+    <a href="{{ url_for('coach_dashboard', page=pagination.prev_num, q=q, pos=pos, team=team) }}"
+       class="btn-dm-outline btn-sm-dm">‹</a>
+    {% endif %}
+    {% for pg in pagination.iter_pages(left_edge=1,right_edge=1,left_current=2,right_current=2) %}
+      {% if pg %}
+      <a href="{{ url_for('coach_dashboard', page=pg, q=q, pos=pos, team=team) }}"
+         class="btn-dm{% if pg != pagination.page %}-outline{% endif %} btn-sm-dm">{{ pg }}</a>
+      {% else %}
+      <span style="padding:5px 8px;color:var(--dm-muted);">…</span>
+      {% endif %}
+    {% endfor %}
+    {% if pagination.has_next %}
+    <a href="{{ url_for('coach_dashboard', page=pagination.next_num, q=q, pos=pos, team=team) }}"
+       class="btn-dm-outline btn-sm-dm">›</a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div style="text-align:center;padding:48px 20px;color:var(--dm-muted);">
+    <i class="bi bi-people" style="font-size:2.5rem;display:block;margin-bottom:12px;opacity:.3;"></i>
+    {% if q or pos or team %}条件に一致する選手がいません{% else %}選手がまだ登録されていません{% endif %}
+    <div style="margin-top:16px;">
+      <a href="{{ url_for('new_player') }}" class="btn-dm btn-sm-dm">選手を追加する</a>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

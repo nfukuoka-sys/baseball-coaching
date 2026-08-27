@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+{% block title %}マイビデオ{% endblock %}
+{% block content %}
+
+<!-- アップロードフォーム -->
+<div class="dm-card" style="margin-bottom:16px;">
+  <div class="dm-card-header">
+    <span class="dm-card-title"><i class="bi bi-camera-video me-1" style="color:#2563eb;"></i>動画をアップロード</span>
+  </div>
+  <div style="padding:16px;">
+    <form method="POST" action="{{ url_for('upload_player_video') }}" enctype="multipart/form-data">
+      <div style="margin-bottom:12px;">
+        <label style="font-size:.72rem;color:var(--dm-muted);display:block;margin-bottom:4px;">タイトル <span style="color:#dc2626;">*</span></label>
+        <input type="text" name="title" required placeholder="例：投球フォーム確認 2024/08"
+               style="width:100%;padding:10px 12px;border:1.5px solid var(--dm-border);border-radius:8px;
+                      font-size:.86rem;background:var(--dm-bg);color:var(--dm-text);outline:none;">
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="font-size:.72rem;color:var(--dm-muted);display:block;margin-bottom:4px;">動画ファイル（MP4/MOV/WebM）</label>
+        <input type="file" name="video_file" accept="video/*"
+               style="width:100%;padding:8px;border:1.5px solid var(--dm-border);border-radius:8px;
+                      font-size:.82rem;background:var(--dm-bg);color:var(--dm-text);">
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="font-size:.72rem;color:var(--dm-muted);display:block;margin-bottom:4px;">またはYouTube URL</label>
+        <input type="url" name="youtube_url" placeholder="https://youtube.com/..."
+               style="width:100%;padding:10px 12px;border:1.5px solid var(--dm-border);border-radius:8px;
+                      font-size:.86rem;background:var(--dm-bg);color:var(--dm-text);outline:none;">
+      </div>
+      <div style="margin-bottom:14px;">
+        <label style="font-size:.72rem;color:var(--dm-muted);display:block;margin-bottom:4px;">メモ（任意）</label>
+        <textarea name="notes" rows="2" placeholder="コーチへのコメントなど"
+                  style="width:100%;padding:10px 12px;border:1.5px solid var(--dm-border);border-radius:8px;
+                         font-size:.86rem;background:var(--dm-bg);color:var(--dm-text);resize:vertical;outline:none;"></textarea>
+      </div>
+      <button type="submit"
+              style="background:var(--dm-blue);color:#fff;border:none;border-radius:8px;
+                     padding:11px 20px;font-size:.82rem;font-weight:700;letter-spacing:.08em;cursor:pointer;width:100%;">
+        <i class="bi bi-upload me-1"></i>アップロード
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- 動画一覧 -->
+<div class="dm-card">
+  <div class="dm-card-header">
+    <span class="dm-card-title"><i class="bi bi-collection-play me-1"></i>マイビデオ</span>
+    <span style="font-size:.72rem;font-weight:700;background:var(--dm-navy);color:#fff;padding:2px 8px;border-radius:10px;">{{ videos|length }}</span>
+  </div>
+  {% if videos %}
+  <div style="padding:12px;display:grid;gap:12px;">
+    {% for v in videos %}
+    <div style="border:1px solid var(--dm-border);border-radius:10px;overflow:hidden;">
+      {% if v.video_file %}
+      <video controls style="width:100%;max-height:220px;background:#000;display:block;">
+        <source src="{{ url_for('uploaded_file', filepath=v.video_file) }}">
+      </video>
+      {% elif v.youtube_url %}
+      {% set eid = v.youtube_url | replace('https://youtu.be/', '') | replace('https://www.youtube.com/watch?v=', '') %}
+      <div style="position:relative;padding-bottom:56.25%;height:0;">
+        <iframe src="https://www.youtube.com/embed/{{ eid.split('&')[0] }}"
+                style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;" allowfullscreen></iframe>
+      </div>
+      {% endif %}
+      <div style="padding:12px;">
+        <div style="font-weight:700;font-size:.9rem;margin-bottom:4px;">{{ v.title }}</div>
+        <div style="font-size:.7rem;color:var(--dm-muted);">{{ v.uploaded_at.strftime('%Y/%m/%d %H:%M') }}</div>
+        {% if v.notes %}
+        <div style="font-size:.78rem;color:var(--dm-text);margin-top:6px;padding:8px;background:var(--dm-light);border-radius:6px;">{{ v.notes }}</div>
+        {% endif %}
+        <form method="POST" action="{{ url_for('delete_player_video', vid=v.id) }}"
+              onsubmit="return confirm('この動画を削除しますか？')" style="margin-top:8px;">
+          <button type="submit"
+                  style="font-size:.72rem;color:#dc2626;background:none;border:1px solid #fecaca;
+                         border-radius:6px;padding:4px 10px;cursor:pointer;">
+            <i class="bi bi-trash"></i> 削除
+          </button>
+        </form>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div style="text-align:center;padding:48px 20px;color:var(--dm-muted);">
+    <i class="bi bi-camera-video" style="font-size:2.5rem;display:block;margin-bottom:10px;opacity:.3;"></i>
+    <div style="font-size:.82rem;">まだ動画がありません</div>
+    <div style="font-size:.72rem;margin-top:4px;">上のフォームからアップロードしてください</div>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}

@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+{% block title %}ドリル管理 — DIMENSIONING{% endblock %}
+{% block content %}
+<div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:24px;">
+  <div>
+    <div class="dm-page-title">DRILLS</div>
+    <div class="dm-page-sub">トレーニング・技術ドリル管理</div>
+  </div>
+  <a href="{{ url_for('new_drill') }}" class="btn-dm btn-sm-dm">
+    <i class="bi bi-plus-circle"></i> ドリルを追加
+  </a>
+</div>
+
+<!-- Filter bar -->
+<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px;align-items:center;">
+  <form method="GET" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;flex:1;">
+    <div style="flex:1;min-width:180px;">
+      <input type="text" name="q" value="{{ q }}" class="dm-input" placeholder="ドリル名で検索...">
+    </div>
+    <input type="hidden" name="category" value="{{ current_category }}">
+    <button type="submit" class="btn-dm-outline btn-sm-dm"><i class="bi bi-search"></i></button>
+    {% if q %}<a href="{{ url_for('coach_drills', category=current_category) }}" class="btn-dm-outline btn-sm-dm">クリア</a>{% endif %}
+  </form>
+</div>
+
+<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:20px;">
+  <a href="{{ url_for('coach_drills', q=q) }}"
+     style="font-size:.75rem;padding:5px 12px;border-radius:20px;text-decoration:none;font-weight:600;
+            {% if not current_category %}background:var(--dm-navy);color:#fff;{% else %}background:var(--dm-light);color:var(--dm-muted);border:1px solid var(--dm-border);{% endif %}">
+    すべて
+  </a>
+  {% for cat in categories %}
+  <a href="{{ url_for('coach_drills', category=cat, q=q) }}"
+     style="font-size:.75rem;padding:5px 12px;border-radius:20px;text-decoration:none;font-weight:600;
+            {% if current_category == cat %}background:var(--dm-navy);color:#fff;{% else %}background:var(--dm-light);color:var(--dm-muted);border:1px solid var(--dm-border);{% endif %}">
+    {{ cat }}
+  </a>
+  {% endfor %}
+</div>
+
+{% if drills %}
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;">
+  {% for d in drills %}
+  <div class="dm-card" style="display:flex;flex-direction:column;">
+    {% if d.image_file %}
+    <img src="{{ url_for('uploaded_file', filepath=d.image_file) }}"
+         style="width:100%;height:140px;object-fit:cover;border-radius:10px 10px 0 0;" alt="">
+    {% elif d.youtube_url %}
+    <div style="background:var(--dm-navy);height:100px;border-radius:10px 10px 0 0;display:flex;align-items:center;justify-content:center;">
+      <i class="bi bi-youtube" style="font-size:2rem;color:rgba(255,255,255,.4);"></i>
+    </div>
+    {% endif %}
+    <div style="padding:14px 16px;flex:1;display:flex;flex-direction:column;gap:8px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <span class="cat-badge cat-{{ d.category }}">{{ d.category }}</span>
+        <span style="font-size:.68rem;color:var(--dm-muted);">{{ d.created_at.strftime('%m/%d') }}</span>
+      </div>
+      <div style="font-weight:700;font-size:.88rem;line-height:1.4;">{{ d.title }}</div>
+      {% if d.description %}
+      <div style="font-size:.75rem;color:var(--dm-muted);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">
+        {{ d.description }}
+      </div>
+      {% endif %}
+      <div style="font-size:.72rem;color:var(--dm-muted);margin-top:auto;">
+        <i class="bi bi-people me-1"></i>{{ d.assignments | selectattr('is_active','equalto',true) | list | length }}名に割り当て中
+        {% if d.video_file %} · <i class="bi bi-file-play me-1"></i>動画あり{% endif %}
+        {% if d.youtube_url %} · <i class="bi bi-youtube me-1"></i>YouTube{% endif %}
+      </div>
+    </div>
+    <div style="padding:10px 16px;border-top:1px solid var(--dm-border);display:flex;gap:6px;flex-wrap:wrap;">
+      <a href="{{ url_for('bulk_assign', did=d.id) }}" class="btn-dm btn-sm-dm" style="flex:1;justify-content:center;font-size:.73rem;">
+        <i class="bi bi-people"></i> 一括割り当て
+      </a>
+      <a href="{{ url_for('edit_drill', did=d.id) }}" class="btn-dm-outline btn-sm-dm" style="justify-content:center;">
+        <i class="bi bi-pencil"></i>
+      </a>
+      <form method="POST" action="{{ url_for('delete_drill', did=d.id) }}">
+        <button type="submit" style="background:none;border:1px solid #fca5a5;color:#dc2626;border-radius:6px;padding:5px 10px;font-size:.75rem;cursor:pointer;font-weight:600;"
+                onclick="return confirm('「{{ d.title }}」を削除しますか？')">
+          <i class="bi bi-trash"></i>
+        </button>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if pagination.pages > 1 %}
+<div style="margin-top:20px;display:flex;justify-content:center;gap:4px;flex-wrap:wrap;">
+  {% if pagination.has_prev %}
+  <a href="{{ url_for('coach_drills', page=pagination.prev_num, category=current_category, q=q) }}" class="btn-dm-outline btn-sm-dm">‹</a>
+  {% endif %}
+  {% for pg in pagination.iter_pages(left_edge=1,right_edge=1,left_current=2,right_current=2) %}
+    {% if pg %}
+    <a href="{{ url_for('coach_drills', page=pg, category=current_category, q=q) }}"
+       class="btn-dm{% if pg != pagination.page %}-outline{% endif %} btn-sm-dm">{{ pg }}</a>
+    {% else %}
+    <span style="padding:5px 8px;color:var(--dm-muted);">…</span>
+    {% endif %}
+  {% endfor %}
+  {% if pagination.has_next %}
+  <a href="{{ url_for('coach_drills', page=pagination.next_num, category=current_category, q=q) }}" class="btn-dm-outline btn-sm-dm">›</a>
+  {% endif %}
+</div>
+{% endif %}
+
+{% else %}
+<div class="dm-card">
+  <div style="text-align:center;padding:48px 20px;color:var(--dm-muted);">
+    <i class="bi bi-journal-x" style="font-size:2.5rem;display:block;margin-bottom:12px;opacity:.3;"></i>
+    {% if q or current_category %}条件に一致するドリルがありません{% else %}ドリルがまだ登録されていません{% endif %}
+    <div style="margin-top:16px;"><a href="{{ url_for('new_drill') }}" class="btn-dm btn-sm-dm">ドリルを追加する</a></div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
