@@ -53,9 +53,11 @@
     {% for v in videos %}
     <div style="border:1px solid var(--dm-border);border-radius:10px;overflow:hidden;">
       {% if v.video_file %}
-      <video controls style="width:100%;max-height:220px;background:#000;display:block;">
-        <source src="{{ url_for('uploaded_file', filepath=v.video_file) }}">
-      </video>
+      <div style="background:#000;display:flex;justify-content:center;max-height:70vh;">
+        <video controls style="max-width:100%;max-height:70vh;width:auto;height:auto;display:block;">
+          <source src="{{ url_for('uploaded_file', filepath=v.video_file) }}">
+        </video>
+      </div>
       {% elif v.youtube_url %}
       {% set eid = v.youtube_url | replace('https://youtu.be/', '') | replace('https://www.youtube.com/watch?v=', '') %}
       <div style="position:relative;padding-bottom:56.25%;height:0;">

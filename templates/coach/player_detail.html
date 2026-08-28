@@ -56,10 +56,23 @@
                   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:monospace;flex:1;min-width:0;">
         {{ invite_url }}
       </div>
-      <button onclick="navigator.clipboard.writeText('{{ invite_url }}').then(()=>{this.textContent='✓ コピー済';setTimeout(()=>{this.textContent='コピー'},2000)})"
+      <button onclick="copyUrl(this,'{{ invite_url }}')"
               style="background:#d97706;color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:.72rem;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">
         コピー
       </button>
+      <script>
+      function copyUrl(btn,url){
+        if(navigator.clipboard&&window.isSecureContext){
+          navigator.clipboard.writeText(url).then(function(){btn.textContent='✓ コピー済';setTimeout(function(){btn.textContent='コピー'},2000)});
+        } else {
+          var ta=document.createElement('textarea');
+          ta.value=url;ta.style.position='fixed';ta.style.opacity='0';
+          document.body.appendChild(ta);ta.focus();ta.select();
+          try{document.execCommand('copy');btn.textContent='✓ コピー済';setTimeout(function(){btn.textContent='コピー'},2000);}catch(e){}
+          document.body.removeChild(ta);
+        }
+      }
+      </script>
     </div>
     <div style="font-size:.65rem;color:#92400e;margin-top:4px;">
       有効期限: {{ active_invite.expires_at.strftime('%Y/%m/%d %H:%M') }} まで
