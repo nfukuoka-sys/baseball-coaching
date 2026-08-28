@@ -319,32 +319,6 @@ def velocity_grade(v):
 app.jinja_env.globals['velocity_grade'] = velocity_grade
 
 
-# ── Login rate limiting (session-based) ──────────────────────────────────────
-MAX_ATTEMPTS = 5
-LOCKOUT_MINUTES = 15
-
-def check_rate_limit():
-    now = datetime.utcnow()
-    attempts = session.get('login_attempts', 0)
-    locked_until = session.get('login_locked_until')
-    if locked_until:
-        locked_until_dt = datetime.fromisoformat(locked_until)
-        if now < locked_until_dt:
-            remaining = int((locked_until_dt - now).total_seconds() / 60) + 1
-            return False, f'ログイン試行が上限に達しました。{remaining}分後に再試行してください。'
-        else:
-            session.pop('login_attempts', None)
-            session.pop('login_locked_until', None)
-    return True, None
-
-
-def record_failed_login():
-    attempts = session.get('login_attempts', 0) + 1
-    session['login_attempts'] = attempts
-    if attempts >= MAX_ATTEMPTS:
-        session['login_locked_until'] = (
-            datetime.utcnow() + timedelta(minutes=LOCKOUT_MINUTES)
-        ).isoformat()
 
 
 # ─── Constants ────────────────────────────────────────────────────────────────
@@ -375,24 +349,19 @@ def login():
     if current_user.is_authenticated:
         return redirect(url_for('index'))
     if request.method == 'POST':
-        ok, msg = check_rate_limit()
-        if not ok:
-            flash(msg, 'error')
-            return render_template('login.html')
-
-        email = request.form.get('email', '').strip()
+        email = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
         user = User.query.filter_by(email=email).first()
 
-        if user and user.status == 'active' and user.check_password(password):
-            session.pop('login_attempts', None)
-            session.pop('login_locked_until', None)
-            session.permanent = True
-            login_user(user)
-            return redirect(url_for('index'))
-
-        record_failed_login()
-        flash('メールアドレスまたはパスワードが正しくありません', 'error')
+        if user and user.check_password(password):
+            if user.status == 'pending':
+                flash('アカウントがまだ有効化されていません。招待リンクから登録してください。', 'error')
+            else:
+                session.permanent = True
+                login_user(user)
+                return redirect(url_for('index'))
+        else:
+            flash('メールアドレスまたはパスワードが正しくありません', 'error')
     return render_template('login.html')
 
 
