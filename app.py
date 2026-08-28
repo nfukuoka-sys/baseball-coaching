@@ -976,16 +976,18 @@ def uploaded_file(filepath):
 # ─── Init ─────────────────────────────────────────────────────────────────────
 
 def init_db():
-    with app.app_context():
-        db.create_all()
-        if not User.query.filter_by(role='coach').first():
-            coach = User(name='福岡', email='coach@dimensioning.jp', role='coach', status='active')
-            coach.set_password('coach1234')
-            db.session.add(coach)
-            db.session.commit()
-            print('✅ コーチアカウント作成: coach@dimensioning.jp / coach1234')
+    db.create_all()
+    if not User.query.filter_by(role='coach').first():
+        coach = User(name='福岡夏希', email='n.fukuoka@dimensioning.jp', role='coach', status='active')
+        coach.set_password('Natsuki1023')
+        db.session.add(coach)
+        db.session.commit()
+        print('✅ コーチアカウント作成: n.fukuoka@dimensioning.jp')
+
+
+with app.app_context():
+    init_db()
 
 
 if __name__ == '__main__':
-    init_db()
     app.run(debug=True, port=5001)
