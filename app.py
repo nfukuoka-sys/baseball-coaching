@@ -12,6 +12,7 @@ from werkzeug.utils import secure_filename
 
 BASE_DIR   = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_DIR = os.path.join(BASE_DIR, 'static', 'uploads')
+DATA_DIR   = '/var/data' if os.path.isdir('/var/data') else BASE_DIR
 ALLOWED_VIDEO = {'mp4', 'mov', 'avi', 'webm'}
 ALLOWED_IMAGE = {'jpg', 'jpeg', 'png', 'gif', 'webp'}
 MAX_UPLOAD_MB = 500
@@ -19,7 +20,7 @@ MAX_UPLOAD_MB = 500
 app = Flask(__name__)
 # ── Security config ──────────────────────────────────────────────────────────
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', secrets.token_hex(32))
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(BASE_DIR, 'baseball.db')
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(DATA_DIR, 'baseball.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['MAX_CONTENT_LENGTH'] = MAX_UPLOAD_MB * 1024 * 1024
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=12)
