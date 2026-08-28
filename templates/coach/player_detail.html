@@ -50,9 +50,16 @@
       <i class="bi bi-link-45deg me-1"></i>招待リンクを送ってアカウントを有効化してください
     </div>
     {% if active_invite %}
-    <div style="font-size:.72rem;color:#78350f;background:#fef3c7;padding:5px 10px;border-radius:6px;
-                overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:6px;font-family:monospace;">
-      {{ request.host_url }}join/{{ active_invite.token }}
+    {% set invite_url = request.url_root.rstrip('/') + url_for('join', token=active_invite.token) %}
+    <div style="display:flex;align-items:center;gap:6px;margin-top:6px;">
+      <div id="invite-url" style="font-size:.72rem;color:#78350f;background:#fef3c7;padding:5px 10px;border-radius:6px;
+                  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:monospace;flex:1;min-width:0;">
+        {{ invite_url }}
+      </div>
+      <button onclick="navigator.clipboard.writeText('{{ invite_url }}').then(()=>{this.textContent='✓ コピー済';setTimeout(()=>{this.textContent='コピー'},2000)})"
+              style="background:#d97706;color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:.72rem;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">
+        コピー
+      </button>
     </div>
     <div style="font-size:.65rem;color:#92400e;margin-top:4px;">
       有効期限: {{ active_invite.expires_at.strftime('%Y/%m/%d %H:%M') }} まで
