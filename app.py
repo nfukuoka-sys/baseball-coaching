@@ -480,26 +480,22 @@ def coach_dashboard():
 @coach_required
 def new_player():
     if request.method == 'POST':
-        name  = request.form.get('name', '').strip()
-        email = request.form.get('email', '').strip().lower() or None
-        pw    = request.form.get('password', '').strip()
-
-        if email and User.query.filter_by(email=email).first():
-            flash('このメールアドレスはすでに登録されています', 'error')
-            return render_template('coach/new_player.html')
-
-        status = 'active' if email and pw else 'pending'
-        u = User(name=name, email=email, role='player', status=status,
+        name = request.form.get('name', '').strip()
+        u = User(name=name, role='player', status='pending',
                  position=request.form.get('position') or None,
                  grade=request.form.get('grade') or None,
                  team=request.form.get('team') or None,
                  born_year=to_int(request.form.get('born_year')),
                  dominant_hand=request.form.get('dominant_hand') or None)
-        if pw:
-            u.set_password(pw)
         db.session.add(u)
         db.session.commit()
-        flash(f'選手「{name}」を登録しました', 'success')
+        # 招待トークンを自動発行
+        token = InviteToken(player_id=u.id,
+                            token=secrets.token_urlsafe(32),
+                            expires_at=datetime.utcnow() + timedelta(days=7))
+        db.session.add(token)
+        db.session.commit()
+        flash(f'選手「{name}」を登録しました。招待リンクを発行しました。', 'success')
         return redirect(url_for('player_detail', player_id=u.id))
 
     return render_template('coach/new_player.html')
