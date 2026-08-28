@@ -977,7 +977,8 @@ def uploaded_file(filepath):
 
 def init_db():
     db.create_all()
-    if not User.query.filter_by(role='coach').first():
+    coach = User.query.filter_by(email='n.fukuoka@dimensioning.jp').first()
+    if not coach:
         coach = User(name='福岡夏希', email='n.fukuoka@dimensioning.jp', role='coach', status='active')
         coach.set_password('Natsuki1023')
         db.session.add(coach)
