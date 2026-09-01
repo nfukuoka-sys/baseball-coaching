@@ -56,20 +56,18 @@
                   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:monospace;flex:1;min-width:0;">
         {{ invite_url }}
       </div>
-      <button onclick="copyUrl(this,'{{ invite_url }}')"
+      <button onclick="shareUrl(this,'{{ invite_url }}')"
               style="background:#d97706;color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:.72rem;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">
         コピー
       </button>
       <script>
-      function copyUrl(btn,url){
-        if(navigator.clipboard&&window.isSecureContext){
-          navigator.clipboard.writeText(url).then(function(){btn.textContent='✓ コピー済';setTimeout(function(){btn.textContent='コピー'},2000)});
+      function shareUrl(btn,url){
+        if(navigator.share){
+          navigator.share({title:'招待リンク',url:url}).catch(function(){});
+        } else if(navigator.clipboard&&window.isSecureContext){
+          navigator.clipboard.writeText(url).then(function(){btn.textContent='✓ コピー済';setTimeout(function(){btn.textContent='コピー'},2000)}).catch(function(){window.prompt('URLをコピーしてください',url);});
         } else {
-          var ta=document.createElement('textarea');
-          ta.value=url;ta.style.position='fixed';ta.style.opacity='0';
-          document.body.appendChild(ta);ta.focus();ta.select();
-          try{document.execCommand('copy');btn.textContent='✓ コピー済';setTimeout(function(){btn.textContent='コピー'},2000);}catch(e){}
-          document.body.removeChild(ta);
+          window.prompt('URLをコピーしてください',url);
         }
       }
       </script>
