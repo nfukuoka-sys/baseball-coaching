@@ -1046,6 +1046,52 @@ def debug_reconvert_status(filepath):
     return json.dumps({'status': status, 'file_exists': exists, 'size': size})
 
 
+@app.route('/debug/fix_src/<path:src_filepath>')
+def debug_fix_src(src_filepath):
+    import json
+    src_path = os.path.join(UPLOAD_DIR, src_filepath)
+    if not os.path.exists(src_path):
+        return json.dumps({'error': 'src not found', 'path': src_path})
+    if not FFMPEG_PATH:
+        return json.dumps({'error': 'no ffmpeg'})
+    # output path: strip _src from filename
+    dst_filepath = src_filepath.replace('_src.', '.')
+    dst_path = os.path.join(UPLOAD_DIR, dst_filepath)
+    if _reconvert_status.get(src_filepath) == 'running':
+        return json.dumps({'result': 'already running'})
+    _reconvert_status[src_filepath] = 'running'
+    tmp_path = dst_path + '.out.mp4'
+    def _do():
+        try:
+            result = subprocess.run(
+                [FFMPEG_PATH, '-y', '-i', src_path,
+                 '-vcodec', 'libx264', '-pix_fmt', 'yuv420p',
+                 '-acodec', 'aac', '-movflags', '+faststart', tmp_path],
+                capture_output=True, timeout=600
+            )
+            if result.returncode == 0:
+                os.replace(tmp_path, dst_path)
+                _reconvert_status[src_filepath] = 'done'
+            else:
+                _reconvert_status[src_filepath] = 'failed:' + result.stderr.decode()[-500:]
+        except Exception as e:
+            _reconvert_status[src_filepath] = f'error:{e}'
+    threading.Thread(target=_do, daemon=True).start()
+    return json.dumps({'result': 'started', 'dst': dst_filepath,
+                       'status_url': '/debug/fix_src_status/' + src_filepath})
+
+
+@app.route('/debug/fix_src_status/<path:src_filepath>')
+def debug_fix_src_status(src_filepath):
+    import json
+    status = _reconvert_status.get(src_filepath, 'not started')
+    dst_filepath = src_filepath.replace('_src.', '.')
+    dst_path = os.path.join(UPLOAD_DIR, dst_filepath)
+    exists = os.path.exists(dst_path)
+    size = os.path.getsize(dst_path) if exists else 0
+    return json.dumps({'status': status, 'dst_exists': exists, 'dst_size': size})
+
+
 @app.route('/debug/codec/<path:filepath>')
 def debug_codec(filepath):
     import json
