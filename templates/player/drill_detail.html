@@ -39,10 +39,13 @@
       <div style="font-size:.72rem;font-weight:700;color:var(--dm-muted);letter-spacing:.08em;margin-bottom:8px;">
         <i class="bi bi-play-circle me-1"></i>解説動画
       </div>
-      <video controls style="width:100%;border-radius:8px;background:#000;max-height:400px;">
-        <source src="{{ url_for('uploaded_file', filepath=assignment.drill.video_file) }}" type="video/mp4">
-        お使いのブラウザは動画再生に対応していません。
-      </video>
+      <div style="background:#000;display:flex;justify-content:center;border-radius:8px;overflow:hidden;max-height:70vh;">
+        <video controls playsinline style="max-width:100%;max-height:70vh;width:auto;height:auto;display:block;">
+          <source src="{{ url_for('uploaded_file', filepath=assignment.drill.video_file) }}" type="video/mp4">
+          <source src="{{ url_for('uploaded_file', filepath=assignment.drill.video_file) }}">
+          お使いのブラウザは動画再生に対応していません。
+        </video>
+      </div>
     </div>
     {% elif embed_url %}
     <div style="margin-bottom:20px;">
