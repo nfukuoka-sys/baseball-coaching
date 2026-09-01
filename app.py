@@ -1009,8 +1009,9 @@ def debug_ffmpeg():
     files = []
     vdir = os.path.join(UPLOAD_DIR, 'videos')
     if os.path.isdir(vdir):
-        files = os.listdir(vdir)[:10]
-    return json.dumps({'ffmpeg': FFMPEG_PATH, 'upload_dir': UPLOAD_DIR, 'videos': files})
+        files = sorted(os.listdir(vdir))
+    drills = [{'id': d.id, 'title': d.title, 'video_file': d.video_file} for d in Drill.query.all()]
+    return json.dumps({'ffmpeg': FFMPEG_PATH, 'upload_dir': UPLOAD_DIR, 'videos': files, 'drills': drills})
 
 
 @app.route('/uploads/<path:filepath>')
