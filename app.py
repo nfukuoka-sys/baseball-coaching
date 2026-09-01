@@ -1004,31 +1004,46 @@ def mark_feedback_read(fid):
     return ('', 204)
 
 
+_reconvert_status = {}
+
 @app.route('/debug/reconvert/<path:filepath>')
 def debug_reconvert(filepath):
     import json
-    full_path = os.path.join(UPLOAD_DIR, filepath)
-    if not os.path.exists(full_path):
+    src_path = os.path.join(UPLOAD_DIR, filepath)
+    if not os.path.exists(src_path):
         return json.dumps({'error': 'file not found'})
     if not FFMPEG_PATH:
         return json.dumps({'error': 'no ffmpeg'})
-    tmp_path = full_path + '.tmp.mp4'
-    try:
-        result = subprocess.run(
-            [FFMPEG_PATH, '-y', '-i', full_path,
-             '-vcodec', 'libx264', '-pix_fmt', 'yuv420p',
-             '-acodec', 'aac', '-movflags', '+faststart', tmp_path],
-            capture_output=True, text=True, timeout=300
-        )
-        if result.returncode == 0:
-            os.replace(tmp_path, full_path)
-            return json.dumps({'result': 'ok', 'file': filepath})
-        else:
-            try: os.remove(tmp_path)
-            except: pass
-            return json.dumps({'result': 'failed', 'stderr': result.stderr[-2000:]})
-    except Exception as e:
-        return json.dumps({'result': 'exception', 'error': str(e)})
+    if _reconvert_status.get(filepath) == 'running':
+        return json.dumps({'result': 'already running'})
+    dst_path = src_path + '.out.mp4'
+    _reconvert_status[filepath] = 'running'
+    def _do():
+        try:
+            result = subprocess.run(
+                [FFMPEG_PATH, '-y', '-i', src_path,
+                 '-vcodec', 'libx264', '-pix_fmt', 'yuv420p',
+                 '-acodec', 'aac', '-movflags', '+faststart', dst_path],
+                capture_output=True, timeout=600
+            )
+            if result.returncode == 0:
+                os.replace(dst_path, src_path)
+                _reconvert_status[filepath] = 'done'
+            else:
+                _reconvert_status[filepath] = 'failed'
+        except Exception as e:
+            _reconvert_status[filepath] = f'error:{e}'
+    threading.Thread(target=_do, daemon=True).start()
+    return json.dumps({'result': 'started - check /debug/reconvert_status/' + filepath})
+
+@app.route('/debug/reconvert_status/<path:filepath>')
+def debug_reconvert_status(filepath):
+    import json
+    status = _reconvert_status.get(filepath, 'not started')
+    full_path = os.path.join(UPLOAD_DIR, filepath)
+    exists = os.path.exists(full_path)
+    size = os.path.getsize(full_path) if exists else 0
+    return json.dumps({'status': status, 'file_exists': exists, 'size': size})
 
 
 @app.route('/debug/codec/<path:filepath>')
