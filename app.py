@@ -991,6 +991,16 @@ def mark_feedback_read(fid):
     return ('', 204)
 
 
+@app.route('/debug/ffmpeg')
+def debug_ffmpeg():
+    import json
+    files = []
+    vdir = os.path.join(UPLOAD_DIR, 'videos')
+    if os.path.isdir(vdir):
+        files = os.listdir(vdir)[:10]
+    return json.dumps({'ffmpeg': FFMPEG_PATH, 'upload_dir': UPLOAD_DIR, 'videos': files})
+
+
 @app.route('/uploads/<path:filepath>')
 def uploaded_file(filepath):
     return send_from_directory(UPLOAD_DIR, filepath)
