@@ -3,6 +3,7 @@ import re
 import secrets
 import subprocess
 import shutil
+import threading
 try:
     import imageio_ffmpeg
     FFMPEG_PATH = imageio_ffmpeg.get_ffmpeg_exe()
@@ -303,19 +304,23 @@ def save_upload(file, subfolder, allowed):
         return None
     orig_ext = file.filename.rsplit('.', 1)[-1].lower()
     ts = datetime.utcnow().strftime('%Y%m%d%H%M%S%f')
-    fname = f'{ts}.{orig_ext}'
     dest = os.path.join(UPLOAD_DIR, subfolder)
     os.makedirs(dest, exist_ok=True)
-    save_path = os.path.join(dest, fname)
-    file.save(save_path)
 
     if orig_ext in {'mov', 'hevc', 'mp4', 'webm'} and FFMPEG_PATH:
+        orig_fname = f'{ts}_orig.{orig_ext}'
         mp4_fname = f'{ts}_h264.mp4'
+        orig_path = os.path.join(dest, orig_fname)
         mp4_path = os.path.join(dest, mp4_fname)
-        if convert_video_to_h264(save_path, mp4_path):
-            os.remove(save_path)
+        file.save(orig_path)
+        if convert_video_to_h264(orig_path, mp4_path):
+            os.remove(orig_path)
             return f'{subfolder}/{mp4_fname}'
+        else:
+            return f'{subfolder}/{orig_fname}'
 
+    fname = f'{ts}.{orig_ext}'
+    file.save(os.path.join(dest, fname))
     return f'{subfolder}/{fname}'
 
 
