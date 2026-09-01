@@ -1003,6 +1003,28 @@ def mark_feedback_read(fid):
     return ('', 204)
 
 
+@app.route('/debug/codec/<path:filepath>')
+def debug_codec(filepath):
+    import json
+    full_path = os.path.join(UPLOAD_DIR, filepath)
+    if not os.path.exists(full_path):
+        return json.dumps({'error': 'file not found'})
+    try:
+        result = subprocess.run(
+            [FFMPEG_PATH, '-i', full_path],
+            capture_output=True, text=True, timeout=10
+        )
+        output = result.stderr
+        codec = 'unknown'
+        for line in output.split('\n'):
+            if 'Video:' in line:
+                codec = line.strip()
+                break
+        return json.dumps({'codec': codec, 'size': os.path.getsize(full_path)})
+    except Exception as e:
+        return json.dumps({'error': str(e)})
+
+
 @app.route('/debug/ffmpeg')
 def debug_ffmpeg():
     import json
