@@ -288,7 +288,8 @@ def convert_video_to_h264(src_path, dst_path):
     try:
         result = subprocess.run(
             [FFMPEG_PATH, '-y', '-i', src_path,
-             '-vcodec', 'libx264', '-acodec', 'aac',
+             '-vcodec', 'libx264', '-pix_fmt', 'yuv420p',
+             '-acodec', 'aac',
              '-movflags', '+faststart', dst_path],
             capture_output=True, timeout=300
         )
@@ -1001,6 +1002,23 @@ def mark_feedback_read(fid):
     f.is_read = True
     db.session.commit()
     return ('', 204)
+
+
+@app.route('/debug/reconvert/<path:filepath>')
+def debug_reconvert(filepath):
+    import json
+    full_path = os.path.join(UPLOAD_DIR, filepath)
+    if not os.path.exists(full_path):
+        return json.dumps({'error': 'file not found'})
+    tmp_path = full_path + '.reconvert.tmp'
+    ok = convert_video_to_h264(full_path, tmp_path)
+    if ok:
+        os.replace(tmp_path, full_path)
+        return json.dumps({'result': 'ok', 'file': filepath})
+    else:
+        try: os.remove(tmp_path)
+        except: pass
+        return json.dumps({'result': 'failed'})
 
 
 @app.route('/debug/codec/<path:filepath>')
