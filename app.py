@@ -3,6 +3,11 @@ import re
 import secrets
 import subprocess
 import shutil
+try:
+    import imageio_ffmpeg
+    FFMPEG_PATH = imageio_ffmpeg.get_ffmpeg_exe()
+except Exception:
+    FFMPEG_PATH = shutil.which('ffmpeg')
 from datetime import datetime, date, timedelta
 from flask import (Flask, render_template, redirect, url_for, request,
                    flash, send_from_directory, session, abort)
@@ -277,12 +282,14 @@ def allowed_file(filename, allowed):
 
 
 def convert_video_to_h264(src_path, dst_path):
+    if not FFMPEG_PATH:
+        return False
     try:
         result = subprocess.run(
-            ['ffmpeg', '-y', '-i', src_path,
+            [FFMPEG_PATH, '-y', '-i', src_path,
              '-vcodec', 'libx264', '-acodec', 'aac',
              '-movflags', '+faststart', dst_path],
-            capture_output=True, timeout=120
+            capture_output=True, timeout=300
         )
         return result.returncode == 0
     except Exception:
@@ -303,8 +310,8 @@ def save_upload(file, subfolder, allowed):
     file.save(save_path)
 
     ext = fname.rsplit('.', 1)[-1].lower()
-    if ext in {'mov', 'hevc', 'mp4'} and shutil.which('ffmpeg'):
-        mp4_fname = fname.rsplit('.', 1)[0] + '_conv.mp4'
+    if ext in {'mov', 'hevc', 'mp4', 'webm'} and FFMPEG_PATH:
+        mp4_fname = fname.rsplit('.', 1)[0] + '_h264.mp4'
         mp4_path = os.path.join(dest, mp4_fname)
         if convert_video_to_h264(save_path, mp4_path):
             os.remove(save_path)
