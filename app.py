@@ -1,6 +1,8 @@
 import os
 import re
 import secrets
+import subprocess
+import shutil
 from datetime import datetime, date, timedelta
 from flask import (Flask, render_template, redirect, url_for, request,
                    flash, send_from_directory, session, abort)
@@ -11,8 +13,8 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
 BASE_DIR   = os.path.dirname(os.path.abspath(__file__))
-UPLOAD_DIR = os.path.join(BASE_DIR, 'static', 'uploads')
 DATA_DIR   = '/var/data' if os.path.isdir('/var/data') else BASE_DIR
+UPLOAD_DIR = os.path.join(DATA_DIR, 'uploads')
 ALLOWED_VIDEO = {'mp4', 'mov', 'avi', 'webm'}
 ALLOWED_IMAGE = {'jpg', 'jpeg', 'png', 'gif', 'webp'}
 MAX_UPLOAD_MB = 500
@@ -274,6 +276,19 @@ def allowed_file(filename, allowed):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed
 
 
+def convert_video_to_h264(src_path, dst_path):
+    try:
+        result = subprocess.run(
+            ['ffmpeg', '-y', '-i', src_path,
+             '-vcodec', 'libx264', '-acodec', 'aac',
+             '-movflags', '+faststart', dst_path],
+            capture_output=True, timeout=120
+        )
+        return result.returncode == 0
+    except Exception:
+        return False
+
+
 def save_upload(file, subfolder, allowed):
     if not file or file.filename == '':
         return None
@@ -284,7 +299,17 @@ def save_upload(file, subfolder, allowed):
     fname = f'{ts}_{fname}'
     dest = os.path.join(UPLOAD_DIR, subfolder)
     os.makedirs(dest, exist_ok=True)
-    file.save(os.path.join(dest, fname))
+    save_path = os.path.join(dest, fname)
+    file.save(save_path)
+
+    ext = fname.rsplit('.', 1)[-1].lower()
+    if ext in {'mov', 'hevc', 'mp4'} and shutil.which('ffmpeg'):
+        mp4_fname = fname.rsplit('.', 1)[0] + '_conv.mp4'
+        mp4_path = os.path.join(dest, mp4_fname)
+        if convert_video_to_h264(save_path, mp4_path):
+            os.remove(save_path)
+            return f'{subfolder}/{mp4_fname}'
+
     return f'{subfolder}/{fname}'
 
 
