@@ -345,25 +345,50 @@ def index():
     return redirect(url_for('login'))
 
 
-@app.route('/login', methods=['GET', 'POST'])
+@app.route('/login')
 def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    return render_template('login.html')
+
+
+@app.route('/login/coach', methods=['GET', 'POST'])
+def login_coach():
     if current_user.is_authenticated:
         return redirect(url_for('index'))
     if request.method == 'POST':
         email = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
         user = User.query.filter_by(email=email).first()
+        if user and user.check_password(password) and user.role == 'coach':
+            session.permanent = True
+            login_user(user)
+            return redirect(url_for('coach_dashboard'))
+        else:
+            flash('メールアドレスまたはパスワードが正しくありません', 'error')
+    return render_template('login_coach.html')
 
+
+@app.route('/login/player', methods=['GET', 'POST'])
+def login_player():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip().lower()
+        password = request.form.get('password', '')
+        user = User.query.filter_by(email=email).first()
         if user and user.check_password(password):
             if user.status == 'pending':
                 flash('アカウントがまだ有効化されていません。招待リンクから登録してください。', 'error')
+            elif user.role != 'player':
+                flash('選手アカウントではありません', 'error')
             else:
                 session.permanent = True
                 login_user(user)
-                return redirect(url_for('index'))
+                return redirect(url_for('player_dashboard'))
         else:
             flash('メールアドレスまたはパスワードが正しくありません', 'error')
-    return render_template('login.html')
+    return render_template('login_player.html')
 
 
 @app.route('/logout')
