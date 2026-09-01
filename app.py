@@ -308,16 +308,24 @@ def save_upload(file, subfolder, allowed):
     os.makedirs(dest, exist_ok=True)
 
     if orig_ext in {'mov', 'hevc', 'mp4', 'webm'} and FFMPEG_PATH:
-        orig_fname = f'{ts}_orig.{orig_ext}'
-        mp4_fname = f'{ts}_h264.mp4'
-        orig_path = os.path.join(dest, orig_fname)
-        mp4_path = os.path.join(dest, mp4_fname)
-        file.save(orig_path)
-        if convert_video_to_h264(orig_path, mp4_path):
-            os.remove(orig_path)
-            return f'{subfolder}/{mp4_fname}'
-        else:
-            return f'{subfolder}/{orig_fname}'
+        src_fname = f'{ts}_src.{orig_ext}'
+        mp4_fname = f'{ts}.mp4'
+        src_path  = os.path.join(dest, src_fname)
+        mp4_path  = os.path.join(dest, mp4_fname)
+        file.save(src_path)
+
+        def _convert():
+            tmp = mp4_path + '.tmp'
+            if convert_video_to_h264(src_path, tmp):
+                os.replace(tmp, mp4_path)
+                try: os.remove(src_path)
+                except: pass
+            else:
+                try: os.rename(src_path, mp4_path)
+                except: pass
+
+        threading.Thread(target=_convert, daemon=True).start()
+        return f'{subfolder}/{mp4_fname}'
 
     fname = f'{ts}.{orig_ext}'
     file.save(os.path.join(dest, fname))
