@@ -316,7 +316,7 @@ def save_upload(file, subfolder, allowed):
         file.save(src_path)
 
         def _convert():
-            tmp = mp4_path + '.tmp'
+            tmp = mp4_path + '.tmp.mp4'
             if convert_video_to_h264(src_path, tmp):
                 os.replace(tmp, mp4_path)
                 try: os.remove(src_path)
@@ -1012,7 +1012,7 @@ def debug_reconvert(filepath):
         return json.dumps({'error': 'file not found'})
     if not FFMPEG_PATH:
         return json.dumps({'error': 'no ffmpeg'})
-    tmp_path = full_path + '.reconvert.tmp'
+    tmp_path = full_path + '.tmp.mp4'
     try:
         result = subprocess.run(
             [FFMPEG_PATH, '-y', '-i', full_path,
