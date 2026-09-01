@@ -1010,15 +1010,25 @@ def debug_reconvert(filepath):
     full_path = os.path.join(UPLOAD_DIR, filepath)
     if not os.path.exists(full_path):
         return json.dumps({'error': 'file not found'})
+    if not FFMPEG_PATH:
+        return json.dumps({'error': 'no ffmpeg'})
     tmp_path = full_path + '.reconvert.tmp'
-    ok = convert_video_to_h264(full_path, tmp_path)
-    if ok:
-        os.replace(tmp_path, full_path)
-        return json.dumps({'result': 'ok', 'file': filepath})
-    else:
-        try: os.remove(tmp_path)
-        except: pass
-        return json.dumps({'result': 'failed'})
+    try:
+        result = subprocess.run(
+            [FFMPEG_PATH, '-y', '-i', full_path,
+             '-vcodec', 'libx264', '-pix_fmt', 'yuv420p',
+             '-acodec', 'aac', '-movflags', '+faststart', tmp_path],
+            capture_output=True, text=True, timeout=300
+        )
+        if result.returncode == 0:
+            os.replace(tmp_path, full_path)
+            return json.dumps({'result': 'ok', 'file': filepath})
+        else:
+            try: os.remove(tmp_path)
+            except: pass
+            return json.dumps({'result': 'failed', 'stderr': result.stderr[-2000:]})
+    except Exception as e:
+        return json.dumps({'result': 'exception', 'error': str(e)})
 
 
 @app.route('/debug/codec/<path:filepath>')
