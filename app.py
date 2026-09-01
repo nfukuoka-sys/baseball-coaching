@@ -301,17 +301,16 @@ def save_upload(file, subfolder, allowed):
         return None
     if not allowed_file(file.filename, allowed):
         return None
-    fname = secure_filename(file.filename)
+    orig_ext = file.filename.rsplit('.', 1)[-1].lower()
     ts = datetime.utcnow().strftime('%Y%m%d%H%M%S%f')
-    fname = f'{ts}_{fname}'
+    fname = f'{ts}.{orig_ext}'
     dest = os.path.join(UPLOAD_DIR, subfolder)
     os.makedirs(dest, exist_ok=True)
     save_path = os.path.join(dest, fname)
     file.save(save_path)
 
-    ext = fname.rsplit('.', 1)[-1].lower()
-    if ext in {'mov', 'hevc', 'mp4', 'webm'} and FFMPEG_PATH:
-        mp4_fname = fname.rsplit('.', 1)[0] + '_h264.mp4'
+    if orig_ext in {'mov', 'hevc', 'mp4', 'webm'} and FFMPEG_PATH:
+        mp4_fname = f'{ts}_h264.mp4'
         mp4_path = os.path.join(dest, mp4_fname)
         if convert_video_to_h264(save_path, mp4_path):
             os.remove(save_path)
