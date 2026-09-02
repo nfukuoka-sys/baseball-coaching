@@ -1220,6 +1220,10 @@ def debug_cleanup():
             kept_files.add(os.path.basename(d.video_file))
         if d.image_file:
             kept_files.add(os.path.basename(d.image_file))
+    # player video/image files
+    for pv in PlayerVideo.query.all():
+        if pv.video_file:
+            kept_files.add(os.path.basename(pv.video_file))
     for subfolder in ['videos', 'player_videos', 'images']:
         folder = os.path.join(UPLOAD_DIR, subfolder)
         if not os.path.isdir(folder):
@@ -1229,7 +1233,13 @@ def debug_cleanup():
             if '.tmp.' in fname or '.out.' in fname or '.startup.' in fname or '.reconvert.' in fname:
                 try:
                     os.remove(os.path.join(folder, fname))
-                    removed.append(fname)
+                    removed.append('tmp:' + fname)
+                except: pass
+            # オーファンファイル（DBに参照なし）を削除
+            elif fname not in kept_files and '_src.' not in fname:
+                try:
+                    os.remove(os.path.join(folder, fname))
+                    removed.append('orphan:' + fname)
                 except: pass
     return json.dumps({'removed': removed, 'count': len(removed)})
 
