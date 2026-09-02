@@ -42,6 +42,43 @@ login_manager.login_message = 'ログインが必要です'
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
+
+def _startup_fix_pending():
+    """起動時に _src.* ファイルを処理: mp4はリネーム、その他はffmpegで変換"""
+    import time
+    time.sleep(3)
+    for subfolder in ['videos', 'player_videos']:
+        folder = os.path.join(UPLOAD_DIR, subfolder)
+        if not os.path.isdir(folder):
+            continue
+        for fname in sorted(os.listdir(folder)):
+            if '_src.' not in fname:
+                continue
+            src_path = os.path.join(folder, fname)
+            ext = fname.rsplit('.', 1)[-1].lower()
+            ts = fname.split('_src.')[0]
+            dst_path = os.path.join(folder, ts + '.mp4')
+            if os.path.exists(dst_path):
+                continue
+            if ext == 'mp4':
+                # すでにH.264のはずなのでリネームだけ
+                try:
+                    os.rename(src_path, dst_path)
+                except Exception:
+                    pass
+            elif FFMPEG_PATH:
+                tmp = dst_path + '.startup.mp4'
+                if convert_video_to_h264(src_path, tmp):
+                    os.replace(tmp, dst_path)
+                    try: os.remove(src_path)
+                    except: pass
+                else:
+                    try: os.remove(tmp)
+                    except: pass
+
+
+threading.Thread(target=_startup_fix_pending, daemon=True).start()
+
 # ─── Models ──────────────────────────────────────────────────────────────────
 
 class User(UserMixin, db.Model):
