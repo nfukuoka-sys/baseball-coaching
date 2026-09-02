@@ -1181,6 +1181,18 @@ def debug_codec(filepath):
         return json.dumps({'error': str(e)})
 
 
+@app.route('/debug/disk')
+def debug_disk():
+    import json, shutil
+    total, used, free = shutil.disk_usage(DATA_DIR)
+    return json.dumps({
+        'total_gb': round(total/1e9, 2),
+        'used_gb': round(used/1e9, 2),
+        'free_gb': round(free/1e9, 2),
+        'used_pct': round(used/total*100, 1)
+    })
+
+
 @app.route('/debug/ffmpeg')
 def debug_ffmpeg():
     import json
