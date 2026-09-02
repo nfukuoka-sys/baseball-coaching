@@ -1193,6 +1193,30 @@ def debug_disk():
     })
 
 
+@app.route('/debug/cleanup')
+def debug_cleanup():
+    import json
+    removed = []
+    kept_files = set()
+    for d in Drill.query.all():
+        if d.video_file:
+            kept_files.add(os.path.basename(d.video_file))
+        if d.image_file:
+            kept_files.add(os.path.basename(d.image_file))
+    for subfolder in ['videos', 'player_videos', 'images']:
+        folder = os.path.join(UPLOAD_DIR, subfolder)
+        if not os.path.isdir(folder):
+            continue
+        for fname in os.listdir(folder):
+            # 一時ファイル・変換中間ファイルは無条件削除
+            if '.tmp.' in fname or '.out.' in fname or '.startup.' in fname or '.reconvert.' in fname:
+                try:
+                    os.remove(os.path.join(folder, fname))
+                    removed.append(fname)
+                except: pass
+    return json.dumps({'removed': removed, 'count': len(removed)})
+
+
 @app.route('/debug/ffmpeg')
 def debug_ffmpeg():
     import json
