@@ -282,6 +282,14 @@ def allowed_file(filename, allowed):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed
 
 
+@app.after_request
+def add_coep_for_video_upload(response):
+    if request.endpoint in ('new_drill', 'edit_drill'):
+        response.headers['Cross-Origin-Opener-Policy'] = 'same-origin'
+        response.headers['Cross-Origin-Embedder-Policy'] = 'require-corp'
+    return response
+
+
 def convert_video_to_h264(src_path, dst_path):
     if not FFMPEG_PATH:
         return False

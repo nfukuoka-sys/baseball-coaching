@@ -1,5 +1,8 @@
 {% extends 'base.html' %}
 {% block title %}{% if drill %}ドリルを編集{% else %}ドリルを追加{% endif %} — DIMENSIONING{% endblock %}
+{% block head %}
+<script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js" crossorigin="anonymous"></script>
+{% endblock %}
 {% block content %}
 <div style="margin-bottom:20px;">
   <a href="{{ url_for('coach_drills') }}" style="color:var(--dm-muted);font-size:.78rem;text-decoration:none;">
@@ -50,8 +53,14 @@
               <label class="dm-form-label">
                 <i class="bi bi-file-play me-1"></i>動画ファイルをアップロード (MP4/MOV 最大500MB)
               </label>
-              <input type="file" name="video_file" class="dm-input" accept="video/*"
+              <input type="file" id="video_file_input" name="video_file" class="dm-input" accept="video/*"
                      style="padding:6px 10px;cursor:pointer;">
+              <div id="ffmpeg-status" style="display:none;margin-top:8px;padding:12px 14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;font-size:.8rem;">
+                <div id="ffmpeg-message" style="color:#1e40af;font-weight:600;"></div>
+                <div style="background:#dbeafe;border-radius:4px;height:6px;margin-top:8px;overflow:hidden;">
+                  <div id="ffmpeg-bar" style="background:#2563eb;height:6px;border-radius:4px;width:0%;transition:width 0.5s;"></div>
+                </div>
+              </div>
               {% if drill and drill.video_file %}
               <div style="font-size:.72rem;color:var(--dm-muted);margin-top:4px;">
                 <i class="bi bi-check-circle text-success me-1"></i>現在: {{ drill.video_file.split('/')[-1] }}
@@ -90,7 +99,7 @@
         </div>
 
         <div style="display:flex;gap:8px;padding-top:4px;">
-          <button type="submit" class="btn-dm" style="flex:1;justify-content:center;">
+          <button type="submit" id="submit-btn" class="btn-dm" style="flex:1;justify-content:center;">
             <i class="bi bi-save"></i> {% if drill %}更新する{% else %}登録する{% endif %}
           </button>
           <a href="{{ url_for('coach_drills') }}" class="btn-dm-outline" style="white-space:nowrap;">キャンセル</a>
@@ -99,4 +108,100 @@
     </form>
   </div>
 </div>
+
+<script>
+(function() {
+  const input = document.getElementById('video_file_input');
+  const statusDiv = document.getElementById('ffmpeg-status');
+  const msgDiv = document.getElementById('ffmpeg-message');
+  const bar = document.getElementById('ffmpeg-bar');
+  const submitBtn = document.getElementById('submit-btn');
+  let convertedBlob = null;
+  let converting = false;
+
+  input.addEventListener('change', async function() {
+    const file = this.files[0];
+    if (!file) return;
+    convertedBlob = null;
+
+    // Only convert video files
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (!['mov','hevc','mp4','webm','avi','m4v'].includes(ext)) return;
+
+    converting = true;
+    submitBtn.disabled = true;
+    statusDiv.style.display = 'block';
+    statusDiv.style.background = '#eff6ff';
+    statusDiv.style.borderColor = '#bfdbfe';
+    msgDiv.style.color = '#1e40af';
+    msgDiv.textContent = 'ffmpegを読み込み中... (初回は30秒程度かかります)';
+    bar.style.width = '3%';
+    bar.style.background = '#2563eb';
+
+    try {
+      if (typeof FFmpeg === 'undefined') throw new Error('ffmpeg.jsが読み込まれていません');
+      const { createFFmpeg, fetchFile } = FFmpeg;
+      const ffmpeg = createFFmpeg({
+        corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js',
+        progress: ({ ratio }) => {
+          bar.style.width = Math.max(10, Math.round(ratio * 100)) + '%';
+          msgDiv.textContent = '変換中... ' + Math.round(ratio * 100) + '%';
+        }
+      });
+
+      await ffmpeg.load();
+      msgDiv.textContent = 'ファイルを読み込み中...';
+      bar.style.width = '8%';
+
+      const inputName = 'input.' + ext;
+      ffmpeg.FS('writeFile', inputName, await fetchFile(file));
+
+      msgDiv.textContent = '変換中... 0%';
+      await ffmpeg.run(
+        '-i', inputName,
+        '-vcodec', 'libx264', '-pix_fmt', 'yuv420p',
+        '-preset', 'fast', '-crf', '23',
+        '-acodec', 'aac',
+        '-movflags', '+faststart',
+        'output.mp4'
+      );
+
+      const data = ffmpeg.FS('readFile', 'output.mp4');
+      convertedBlob = new Blob([data.buffer], { type: 'video/mp4' });
+      const sizeMB = (convertedBlob.size / 1024 / 1024).toFixed(1);
+
+      bar.style.width = '100%';
+      bar.style.background = '#16a34a';
+      statusDiv.style.background = '#f0fdf4';
+      statusDiv.style.borderColor = '#86efac';
+      msgDiv.style.color = '#15803d';
+      msgDiv.textContent = '✓ H.264変換完了 (' + sizeMB + 'MB) — アップロードできます';
+    } catch(err) {
+      bar.style.width = '100%';
+      bar.style.background = '#ef4444';
+      statusDiv.style.background = '#fef2f2';
+      statusDiv.style.borderColor = '#fecaca';
+      msgDiv.style.color = '#dc2626';
+      msgDiv.textContent = '変換失敗: ' + err.message + ' — 元のファイルをアップロードします';
+      convertedBlob = null;
+    }
+
+    converting = false;
+    submitBtn.disabled = false;
+  });
+
+  document.querySelector('form').addEventListener('submit', function(e) {
+    if (converting) {
+      e.preventDefault();
+      alert('変換中です。しばらくお待ちください。');
+      return;
+    }
+    if (convertedBlob) {
+      const dt = new DataTransfer();
+      dt.items.add(new File([convertedBlob], 'video.mp4', { type: 'video/mp4' }));
+      input.files = dt.files;
+    }
+  });
+})();
+</script>
 {% endblock %}
