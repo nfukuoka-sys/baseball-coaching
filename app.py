@@ -25,6 +25,23 @@ ALLOWED_VIDEO = {'mp4', 'mov', 'avi', 'webm'}
 ALLOWED_IMAGE = {'jpg', 'jpeg', 'png', 'gif', 'webp'}
 MAX_UPLOAD_MB = 500
 
+# 起動前に一時ファイルを削除してディスク空き確保
+def _early_cleanup():
+    if not os.path.isdir(UPLOAD_DIR):
+        return
+    for sub in os.listdir(UPLOAD_DIR):
+        folder = os.path.join(UPLOAD_DIR, sub)
+        if not os.path.isdir(folder):
+            continue
+        for fname in os.listdir(folder):
+            if any(x in fname for x in ['.tmp.', '.out.', '.startup.', '.reconvert.']):
+                try:
+                    os.remove(os.path.join(folder, fname))
+                except Exception:
+                    pass
+
+_early_cleanup()
+
 app = Flask(__name__)
 # ── Security config ──────────────────────────────────────────────────────────
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', secrets.token_hex(32))
