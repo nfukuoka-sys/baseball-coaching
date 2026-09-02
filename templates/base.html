@@ -6,6 +6,8 @@
   <title>{% block title %}DIMENSIONING — 選手管理{% endblock %}</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet" crossorigin="anonymous">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,500;1,600&family=Noto+Serif+JP:wght@600;700&display=swap">
   <style>
     :root {
       --dm-navy: #0b1930;
@@ -30,9 +32,11 @@
     .dm-nav-brand-icon { width: 32px; height: 32px; background: var(--dm-blue);
                           border-radius: 6px; display: flex; align-items: center; justify-content: center; }
     .dm-nav-brand-icon svg { width: 20px; height: 20px; fill: #fff; }
-    .dm-nav-brand-text { color: #fff; font-size: .82rem; letter-spacing: .15em;
-                          font-weight: 600; line-height: 1.2; }
-    .dm-nav-brand-sub  { color: rgba(255,255,255,.45); font-size: .6rem; letter-spacing: .1em; display: block; }
+    .dm-nav-brand-text { color: #fff; font-size: .95rem; letter-spacing: .22em;
+                          font-family: 'Cormorant Garamond', Georgia, serif;
+                          font-weight: 500; font-style: italic; line-height: 1.2; }
+    .dm-nav-brand-sub  { color: rgba(255,255,255,.45); font-size: .54rem; letter-spacing: .14em; display: block;
+                          font-family: 'Helvetica Neue', Arial, sans-serif; font-style: normal; font-weight: 400; }
     .dm-nav-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
     .dm-nav-user { color: rgba(255,255,255,.7); font-size: .8rem; display: flex; align-items: center; gap: 6px; }
     .dm-nav-badge { font-size: .65rem; padding: 2px 8px; border-radius: 10px;
@@ -159,7 +163,8 @@
     .collapse-toggle.open .arrow { transform: rotate(180deg); }
 
     /* ── Page title ── */
-    .dm-page-title { font-size: 1.1rem; font-weight: 800; letter-spacing: .05em; color: var(--dm-navy); }
+    .dm-page-title { font-size: 1.15rem; font-weight: 700; letter-spacing: .04em; color: var(--dm-navy);
+                     font-family: 'Noto Serif JP', 'Georgia', 'Times New Roman', serif; }
     .dm-page-sub   { font-size: .75rem; color: var(--dm-muted); margin-top: 2px; }
 
     /* ── Responsive helpers ── */
