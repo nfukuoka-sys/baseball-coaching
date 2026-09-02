@@ -316,7 +316,14 @@ def save_upload(file, subfolder, allowed):
     dest = os.path.join(UPLOAD_DIR, subfolder)
     os.makedirs(dest, exist_ok=True)
 
-    if orig_ext in {'mov', 'hevc', 'mp4', 'webm'} and FFMPEG_PATH:
+    # mp4はクライアント側でH.264変換済みのためそのまま保存
+    if orig_ext == 'mp4':
+        fname = f'{ts}.mp4'
+        file.save(os.path.join(dest, fname))
+        return f'{subfolder}/{fname}'
+
+    # mov/hevc/webmはサーバー側でバックグラウンド変換
+    if orig_ext in {'mov', 'hevc', 'webm'} and FFMPEG_PATH:
         src_fname = f'{ts}_src.{orig_ext}'
         mp4_fname = f'{ts}.mp4'
         src_path  = os.path.join(dest, src_fname)
@@ -1052,6 +1059,21 @@ def debug_reconvert_status(filepath):
     exists = os.path.exists(full_path)
     size = os.path.getsize(full_path) if exists else 0
     return json.dumps({'status': status, 'file_exists': exists, 'size': size})
+
+
+@app.route('/debug/rename_src/<path:src_filepath>')
+def debug_rename_src(src_filepath):
+    import json
+    src_path = os.path.join(UPLOAD_DIR, src_filepath)
+    if not os.path.exists(src_path):
+        return json.dumps({'error': 'not found', 'path': src_path})
+    dst_filepath = src_filepath.replace('_src.', '.')
+    dst_path = os.path.join(UPLOAD_DIR, dst_filepath)
+    try:
+        os.rename(src_path, dst_path)
+        return json.dumps({'result': 'ok', 'dst': dst_filepath})
+    except Exception as e:
+        return json.dumps({'error': str(e)})
 
 
 @app.route('/debug/fix_src/<path:src_filepath>')
