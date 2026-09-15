@@ -1255,6 +1255,28 @@ def debug_ffmpeg():
     return json.dumps({'ffmpeg': FFMPEG_PATH, 'upload_dir': UPLOAD_DIR, 'videos': files, 'drills': drills})
 
 
+@app.route('/debug/migrate')
+def debug_migrate():
+    import json, sqlite3 as _sqlite3
+    db_path = os.path.join(DATA_DIR, 'baseball.db')
+    con = _sqlite3.connect(db_path)
+    cur = con.cursor()
+    results = {}
+    # Add missing columns to drill table
+    cur.execute("PRAGMA table_info(drill)")
+    cols = {row[1] for row in cur.fetchall()}
+    results['existing_cols'] = sorted(cols)
+    added = []
+    for col, coltype in [('notes', 'TEXT'), ('youtube_url', 'VARCHAR(500)'), ('image_file', 'VARCHAR(300)')]:
+        if col not in cols:
+            cur.execute(f'ALTER TABLE drill ADD COLUMN {col} {coltype}')
+            added.append(col)
+    con.commit()
+    con.close()
+    results['added'] = added
+    return json.dumps(results)
+
+
 @app.route('/uploads/<path:filepath>')
 def uploaded_file(filepath):
     return send_from_directory(UPLOAD_DIR, filepath)
