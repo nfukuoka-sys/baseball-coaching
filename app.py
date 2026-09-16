@@ -608,6 +608,32 @@ def coach_dashboard():
                            q=q, pos=pos, team=team)
 
 
+@app.route('/coach/players/<int:pid>/delete', methods=['POST'])
+@login_required
+@coach_required
+def delete_player(pid):
+    player = User.query.get_or_404(pid)
+    if player.role == 'coach':
+        flash('コーチアカウントは削除できません', 'error')
+        return redirect(url_for('coach_dashboard'))
+    # 関連データを全削除
+    for prog in TrainingProgram.query.filter_by(player_id=pid).all():
+        db.session.delete(prog)
+    Assignment.query.filter_by(player_id=pid).delete()
+    PhysicalData.query.filter_by(player_id=pid).delete()
+    InBodyData.query.filter_by(player_id=pid).delete()
+    RapsodoData.query.filter_by(player_id=pid).delete()
+    VALDData.query.filter_by(player_id=pid).delete()
+    Issue.query.filter_by(player_id=pid).delete()
+    CoachFeedback.query.filter_by(player_id=pid).delete()
+    PlayerVideo.query.filter_by(player_id=pid).delete()
+    InviteToken.query.filter_by(player_id=pid).delete()
+    db.session.delete(player)
+    db.session.commit()
+    flash(f'選手「{player.name}」を削除しました', 'success')
+    return redirect(url_for('coach_dashboard'))
+
+
 @app.route('/coach/players/new', methods=['GET', 'POST'])
 @login_required
 @coach_required

@@ -39,6 +39,14 @@
     {% for iss in issues %}<span class="issue-tag">{{ iss.tag }}</span>{% endfor %}
   </div>
   {% endif %}
+  <form method="POST" action="{{ url_for('delete_player', pid=player.id) }}" style="flex-shrink:0;">
+    <button type="submit"
+            onclick="return confirm('選手「{{ player.name }}」とすべてのデータを削除します。この操作は取り消せません。続けますか？')"
+            style="background:none;border:1px solid #fca5a5;color:#dc2626;border-radius:6px;
+                   padding:6px 12px;font-size:.73rem;cursor:pointer;white-space:nowrap;">
+      <i class="bi bi-trash"></i> 選手を削除
+    </button>
+  </form>
 </div>
 
 <!-- 招待リンク UI -->
