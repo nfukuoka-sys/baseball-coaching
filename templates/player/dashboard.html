@@ -175,6 +175,25 @@
 </div>
 {% endif %}
 
+<!-- ── プログラム ── -->
+<div class="dm-card" style="margin-bottom:14px;">
+  <div class="dm-card-header">
+    <span class="dm-card-title"><i class="bi bi-journal-text me-1" style="color:#7c3aed;"></i>トレーニングプログラム</span>
+    <a href="{{ url_for('player_programs') }}"
+       style="font-size:.72rem;color:var(--dm-blue);text-decoration:none;font-weight:700;">
+      すべて見る <i class="bi bi-arrow-right"></i>
+    </a>
+  </div>
+  <div style="padding:14px 18px;font-size:.83rem;color:var(--dm-muted);">
+    コーチから作成されたトレーニングプログラムを確認できます。
+    <div style="margin-top:8px;">
+      <a href="{{ url_for('player_programs') }}" class="btn-dm btn-sm-dm" style="display:inline-flex;align-items:center;gap:6px;">
+        <i class="bi bi-journal-text"></i> プログラムを見る
+      </a>
+    </div>
+  </div>
+</div>
+
 <!-- ── 練習メニュー ── -->
 <div class="dm-card">
   <div class="dm-card-header">

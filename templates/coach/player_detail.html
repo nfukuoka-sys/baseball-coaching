@@ -93,6 +93,7 @@
     <div class="dm-tab" data-tab="rapsodo">球速</div>
     <div class="dm-tab" data-tab="vald">VALD</div>
     <div class="dm-tab" data-tab="drills">ドリル</div>
+    <div class="dm-tab" data-tab="programs">プログラム{% if programs %} <span style="background:#7c3aed;color:#fff;font-size:.65rem;padding:1px 5px;border-radius:8px;margin-left:3px;">{{ programs|length }}</span>{% endif %}</div>
     <div class="dm-tab" data-tab="issues">課題{% if issues %} <span style="background:#ef4444;color:#fff;font-size:.65rem;padding:1px 5px;border-radius:8px;margin-left:3px;">{{ issues|length }}</span>{% endif %}</div>
     <div class="dm-tab" data-tab="feedback">フィードバック{% if feedbacks %} <span style="background:#2563eb;color:#fff;font-size:.65rem;padding:1px 5px;border-radius:8px;margin-left:3px;">{{ feedbacks|length }}</span>{% endif %}</div>
     <div class="dm-tab" data-tab="player-videos">動画{% if player_videos %} <span style="background:#0f766e;color:#fff;font-size:.65rem;padding:1px 5px;border-radius:8px;margin-left:3px;">{{ player_videos|length }}</span>{% endif %}</div>
@@ -516,6 +517,143 @@
     {% else %}
     <div style="text-align:center;padding:32px;color:var(--dm-muted);font-size:.83rem;">
       <i class="bi bi-journal-x" style="font-size:2rem;display:block;margin-bottom:8px;opacity:.3;"></i>ドリル未割り当て
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ── PROGRAMS ── -->
+  <div id="programs" class="dm-tab-pane" style="padding:20px;">
+    <!-- 新規プログラム作成 -->
+    <div style="display:flex;justify-content:flex-end;margin-bottom:14px;">
+      <button class="btn-dm-outline btn-sm-dm collapse-toggle" data-target="new-program-form">
+        <i class="bi bi-plus"></i> プログラムを作成
+      </button>
+    </div>
+    <div id="new-program-form" style="display:none;background:var(--dm-light);border-radius:8px;padding:16px;margin-bottom:20px;">
+      <form method="POST" action="{{ url_for('create_program', pid=player.id) }}">
+        <div style="display:grid;gap:10px;margin-bottom:10px;">
+          <div>
+            <label class="dm-form-label">プログラム名 <span style="color:#ef4444;">*</span></label>
+            <input type="text" name="name" class="dm-input" required placeholder="例：週3回トレーニングメニュー">
+          </div>
+          <div>
+            <label class="dm-form-label">説明（任意）</label>
+            <input type="text" name="description" class="dm-input" placeholder="メモや目的など">
+          </div>
+        </div>
+        <button type="submit" class="btn-dm btn-sm-dm"><i class="bi bi-check2"></i> 作成</button>
+      </form>
+    </div>
+
+    {% if programs %}
+    {% for prog in programs %}
+    <div style="background:var(--dm-light);border-radius:10px;padding:16px;margin-bottom:16px;border:1px solid rgba(0,0,0,.06);">
+      <!-- プログラムヘッダー -->
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+        <div style="flex:1;">
+          <div style="font-weight:800;font-size:.95rem;color:var(--dm-navy);">{{ prog.name }}</div>
+          {% if prog.description %}<div style="font-size:.75rem;color:var(--dm-muted);margin-top:2px;">{{ prog.description }}</div>{% endif %}
+          <div style="font-size:.68rem;color:var(--dm-muted);margin-top:3px;">作成: {{ prog.created_at.strftime('%Y/%m/%d') }}</div>
+        </div>
+        <form method="POST" action="{{ url_for('delete_program', pid=player.id, prog_id=prog.id) }}" style="flex-shrink:0;">
+          <button type="submit" style="background:none;border:1px solid #fca5a5;color:#dc2626;border-radius:4px;padding:3px 8px;font-size:.72rem;cursor:pointer;"
+                  onclick="return confirm('プログラムを削除しますか？')">削除</button>
+        </form>
+      </div>
+
+      <!-- ドリル一覧（カテゴリーでグループ化） -->
+      {% if prog.items %}
+      {% set cat_order = ['投球','打撃','プライオボール','スタビリティ','モビリティ','ストレングス','コンディショニング','その他'] %}
+      {% for cat in cat_order %}
+        {% set cat_items = prog.items | selectattr('drill.category', 'equalto', cat) | list %}
+        {% if cat_items %}
+        <div style="margin-bottom:10px;">
+          <div style="font-size:.68rem;font-weight:700;letter-spacing:.12em;color:var(--dm-muted);margin-bottom:6px;display:flex;align-items:center;gap:6px;">
+            <span class="cat-badge cat-{{ cat }}" style="font-size:.62rem;">{{ cat }}</span>
+          </div>
+          {% for item in cat_items %}
+          <div style="display:flex;align-items:center;gap:10px;background:#fff;border-radius:7px;padding:10px 12px;margin-bottom:5px;border:1px solid rgba(0,0,0,.05);">
+            <div style="flex:1;min-width:0;">
+              <div style="font-weight:700;font-size:.83rem;">{{ item.drill.title }}</div>
+              {% if item.note %}<div style="font-size:.72rem;color:var(--dm-blue);margin-top:2px;">{{ item.note }}</div>{% endif %}
+            </div>
+            <!-- インライン編集フォーム -->
+            <form method="POST" action="{{ url_for('update_program_item', item_id=item.id) }}"
+                  style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+              <div style="display:flex;align-items:center;gap:4px;">
+                <input type="number" name="sets" value="{{ item.sets }}" min="1" max="99"
+                       style="width:44px;border:1px solid #d1d5db;border-radius:4px;padding:3px 5px;font-size:.78rem;text-align:center;">
+                <span style="font-size:.72rem;color:var(--dm-muted);">セット</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:4px;">
+                <input type="text" name="reps" value="{{ item.reps }}"
+                       style="width:52px;border:1px solid #d1d5db;border-radius:4px;padding:3px 5px;font-size:.78rem;text-align:center;">
+                <span style="font-size:.72rem;color:var(--dm-muted);">回</span>
+              </div>
+              <button type="submit" style="background:#2563eb;color:#fff;border:none;border-radius:4px;padding:3px 8px;font-size:.72rem;cursor:pointer;">保存</button>
+            </form>
+            <form method="POST" action="{{ url_for('delete_program_item', item_id=item.id) }}" style="flex-shrink:0;">
+              <button type="submit" style="background:none;border:1px solid #fca5a5;color:#dc2626;border-radius:4px;padding:3px 8px;font-size:.72rem;cursor:pointer;"
+                      onclick="return confirm('削除しますか？')"><i class="bi bi-x"></i></button>
+            </form>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+      {% endfor %}
+      {% else %}
+      <div style="font-size:.8rem;color:var(--dm-muted);text-align:center;padding:12px;">ドリルが追加されていません</div>
+      {% endif %}
+
+      <!-- ドリル追加フォーム -->
+      <button class="btn-dm-outline btn-sm-dm collapse-toggle" data-target="add-item-{{ prog.id }}"
+              style="width:100%;margin-top:10px;">
+        <i class="bi bi-plus-circle"></i> ドリルを追加
+      </button>
+      <div id="add-item-{{ prog.id }}" style="display:none;background:#fff;border-radius:8px;padding:14px;margin-top:8px;border:1px solid rgba(0,0,0,.08);">
+        <form method="POST" action="{{ url_for('add_program_item', pid=player.id, prog_id=prog.id) }}">
+          <div style="display:grid;gap:8px;margin-bottom:10px;">
+            <div>
+              <label class="dm-form-label">ドリル</label>
+              <select name="drill_id" class="dm-input" required>
+                <option value="">選択してください</option>
+                {% set cat_order2 = ['投球','打撃','プライオボール','スタビリティ','モビリティ','ストレングス','コンディショニング','その他'] %}
+                {% for cat in cat_order2 %}
+                  {% set cat_drills = all_drills | selectattr('category', 'equalto', cat) | list %}
+                  {% if cat_drills %}
+                  <optgroup label="{{ cat }}">
+                    {% for d in cat_drills %}
+                    <option value="{{ d.id }}">{{ d.title }}</option>
+                    {% endfor %}
+                  </optgroup>
+                  {% endif %}
+                {% endfor %}
+              </select>
+            </div>
+            <div style="display:flex;gap:10px;">
+              <div style="flex:1;">
+                <label class="dm-form-label">セット数</label>
+                <input type="number" name="sets" value="3" min="1" max="99" class="dm-input">
+              </div>
+              <div style="flex:1;">
+                <label class="dm-form-label">回数・時間</label>
+                <input type="text" name="reps" value="10" class="dm-input" placeholder="10回 / 30秒">
+              </div>
+            </div>
+            <div>
+              <label class="dm-form-label">メモ（任意）</label>
+              <input type="text" name="note" class="dm-input" placeholder="フォームの注意点など">
+            </div>
+          </div>
+          <button type="submit" class="btn-dm btn-sm-dm"><i class="bi bi-check2"></i> 追加</button>
+        </form>
+      </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div style="text-align:center;padding:40px;color:var(--dm-muted);font-size:.83rem;">
+      <i class="bi bi-journal-text" style="font-size:2rem;display:block;margin-bottom:8px;opacity:.3;"></i>
+      まだプログラムがありません
     </div>
     {% endif %}
   </div>

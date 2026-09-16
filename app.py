@@ -275,6 +275,30 @@ class Assignment(db.Model):
     is_active   = db.Column(db.Boolean, default=True)
 
 
+class TrainingProgram(db.Model):
+    id          = db.Column(db.Integer, primary_key=True)
+    player_id   = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    name        = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    created_by  = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_at  = db.Column(db.DateTime, default=datetime.utcnow)
+    is_active   = db.Column(db.Boolean, default=True)
+    items       = db.relationship('ProgramItem', backref='program', lazy=True,
+                                  order_by='ProgramItem.order_num',
+                                  cascade='all, delete-orphan')
+
+
+class ProgramItem(db.Model):
+    id          = db.Column(db.Integer, primary_key=True)
+    program_id  = db.Column(db.Integer, db.ForeignKey('training_program.id'), nullable=False)
+    drill_id    = db.Column(db.Integer, db.ForeignKey('drill.id'), nullable=False)
+    sets        = db.Column(db.Integer, default=3)
+    reps        = db.Column(db.String(50), default='10')
+    order_num   = db.Column(db.Integer, default=0)
+    note        = db.Column(db.Text)
+    drill       = db.relationship('Drill')
+
+
 class Issue(db.Model):
     id          = db.Column(db.Integer, primary_key=True)
     player_id   = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -631,6 +655,8 @@ def player_detail(player_id):
                                          .order_by(CoachFeedback.created_at.desc()).limit(20).all()
     player_videos   = PlayerVideo.query.filter_by(player_id=player_id)\
                                        .order_by(PlayerVideo.uploaded_at.desc()).all()
+    programs        = TrainingProgram.query.filter_by(player_id=player_id, is_active=True)\
+                                          .order_by(TrainingProgram.created_at.desc()).all()
 
     return render_template('coach/player_detail.html',
                            player=player,
@@ -640,7 +666,8 @@ def player_detail(player_id):
                            all_drills=all_drills, assigned_ids=assigned_ids,
                            today_str=today_str, pitch_types=PITCH_TYPES,
                            vald_tests=VALD_TESTS, active_invite=active_invite,
-                           feedbacks=feedbacks, player_videos=player_videos)
+                           feedbacks=feedbacks, player_videos=player_videos,
+                           programs=programs, categories=CATEGORIES)
 
 
 # ── Priority note ──
@@ -846,6 +873,80 @@ def unassign_drill(pid, aid):
     return redirect(url_for('player_detail', player_id=pid) + '#drills')
 
 
+# ─── Coach: Training Programs ────────────────────────────────────────────────
+
+@app.route('/coach/players/<int:pid>/programs/new', methods=['POST'])
+@login_required
+@coach_required
+def create_program(pid):
+    name = request.form.get('name', '').strip()
+    desc = request.form.get('description', '').strip()
+    if not name:
+        flash('プログラム名を入力してください', 'error')
+        return redirect(url_for('player_detail', player_id=pid) + '#programs')
+    prog = TrainingProgram(player_id=pid, name=name,
+                           description=desc or None, created_by=current_user.id)
+    db.session.add(prog)
+    db.session.commit()
+    flash('プログラムを作成しました', 'success')
+    return redirect(url_for('player_detail', player_id=pid) + '#programs')
+
+
+@app.route('/coach/players/<int:pid>/programs/<int:prog_id>/delete', methods=['POST'])
+@login_required
+@coach_required
+def delete_program(pid, prog_id):
+    prog = TrainingProgram.query.get_or_404(prog_id)
+    db.session.delete(prog)
+    db.session.commit()
+    flash('プログラムを削除しました', 'success')
+    return redirect(url_for('player_detail', player_id=pid) + '#programs')
+
+
+@app.route('/coach/players/<int:pid>/programs/<int:prog_id>/items/add', methods=['POST'])
+@login_required
+@coach_required
+def add_program_item(pid, prog_id):
+    prog = TrainingProgram.query.get_or_404(prog_id)
+    drill_id = request.form.get('drill_id', type=int)
+    sets = request.form.get('sets', 3, type=int)
+    reps = request.form.get('reps', '10').strip()
+    note = request.form.get('note', '').strip()
+    max_order = db.session.query(db.func.max(ProgramItem.order_num))\
+                          .filter_by(program_id=prog_id).scalar() or 0
+    item = ProgramItem(program_id=prog_id, drill_id=drill_id, sets=sets,
+                       reps=reps, note=note or None, order_num=max_order + 1)
+    db.session.add(item)
+    db.session.commit()
+    flash('ドリルを追加しました', 'success')
+    return redirect(url_for('player_detail', player_id=pid) + '#programs')
+
+
+@app.route('/coach/programs/items/<int:item_id>/update', methods=['POST'])
+@login_required
+@coach_required
+def update_program_item(item_id):
+    item = ProgramItem.query.get_or_404(item_id)
+    pid = TrainingProgram.query.get(item.program_id).player_id
+    item.sets = request.form.get('sets', item.sets, type=int)
+    item.reps = request.form.get('reps', item.reps).strip()
+    item.note = request.form.get('note', '').strip() or None
+    db.session.commit()
+    return redirect(url_for('player_detail', player_id=pid) + '#programs')
+
+
+@app.route('/coach/programs/items/<int:item_id>/delete', methods=['POST'])
+@login_required
+@coach_required
+def delete_program_item(item_id):
+    item = ProgramItem.query.get_or_404(item_id)
+    pid = TrainingProgram.query.get(item.program_id).player_id
+    db.session.delete(item)
+    db.session.commit()
+    flash('ドリルを削除しました', 'success')
+    return redirect(url_for('player_detail', player_id=pid) + '#programs')
+
+
 # ─── Coach: Drills ────────────────────────────────────────────────────────────
 
 @app.route('/coach/drills')
@@ -957,6 +1058,17 @@ def player_drill_detail(aid):
         return redirect(url_for('index'))
     return render_template('player/drill_detail.html', assignment=a,
                            embed_url=youtube_embed(a.drill.youtube_url))
+
+
+@app.route('/player/programs')
+@login_required
+def player_programs():
+    if current_user.role == 'coach':
+        return redirect(url_for('coach_dashboard'))
+    programs = TrainingProgram.query.filter_by(
+        player_id=current_user.id, is_active=True
+    ).order_by(TrainingProgram.created_at.desc()).all()
+    return render_template('player/programs.html', programs=programs, categories=CATEGORIES)
 
 
 @app.route('/player/profile')
@@ -1265,12 +1377,38 @@ def debug_migrate():
     # Add missing columns to drill table
     cur.execute("PRAGMA table_info(drill)")
     cols = {row[1] for row in cur.fetchall()}
-    results['existing_cols'] = sorted(cols)
+    results['existing_drill_cols'] = sorted(cols)
     added = []
     for col, coltype in [('notes', 'TEXT'), ('youtube_url', 'VARCHAR(500)'), ('image_file', 'VARCHAR(300)')]:
         if col not in cols:
             cur.execute(f'ALTER TABLE drill ADD COLUMN {col} {coltype}')
             added.append(col)
+    # Create training_program table if missing
+    cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='training_program'")
+    if not cur.fetchone():
+        cur.execute('''CREATE TABLE training_program (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            player_id INTEGER NOT NULL REFERENCES user(id),
+            name VARCHAR(200) NOT NULL,
+            description TEXT,
+            created_by INTEGER REFERENCES user(id),
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            is_active BOOLEAN DEFAULT 1
+        )''')
+        added.append('table:training_program')
+    # Create program_item table if missing
+    cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='program_item'")
+    if not cur.fetchone():
+        cur.execute('''CREATE TABLE program_item (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            program_id INTEGER NOT NULL REFERENCES training_program(id),
+            drill_id INTEGER NOT NULL REFERENCES drill(id),
+            sets INTEGER DEFAULT 3,
+            reps VARCHAR(50) DEFAULT "10",
+            order_num INTEGER DEFAULT 0,
+            note TEXT
+        )''')
+        added.append('table:program_item')
     con.commit()
     con.close()
     results['added'] = added

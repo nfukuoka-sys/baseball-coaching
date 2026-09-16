@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+{% block title %}トレーニングプログラム — {{ current_user.name }}{% endblock %}
+{% block content %}
+
+<div style="margin-bottom:12px;">
+  <a href="{{ url_for('player_dashboard') }}" style="color:var(--dm-muted);font-size:.78rem;text-decoration:none;">
+    <i class="bi bi-arrow-left me-1"></i>ホームに戻る
+  </a>
+</div>
+
+<div style="font-size:1.1rem;font-weight:800;letter-spacing:.04em;color:var(--dm-navy);margin-bottom:16px;">
+  <i class="bi bi-journal-text me-2"></i>トレーニングプログラム
+</div>
+
+{% if programs %}
+{% set cat_order = ['投球','打撃','プライオボール','スタビリティ','モビリティ','ストレングス','コンディショニング','その他'] %}
+{% for prog in programs %}
+<div class="dm-card" style="margin-bottom:20px;">
+  <div style="padding:18px 20px 12px;">
+    <div style="font-weight:800;font-size:1rem;color:var(--dm-navy);">{{ prog.name }}</div>
+    {% if prog.description %}
+    <div style="font-size:.78rem;color:var(--dm-muted);margin-top:4px;">{{ prog.description }}</div>
+    {% endif %}
+    <div style="font-size:.68rem;color:var(--dm-muted);margin-top:4px;">
+      作成: {{ prog.created_at.strftime('%Y/%m/%d') }}
+    </div>
+  </div>
+
+  {% if prog.items %}
+  <div style="padding:0 20px 18px;">
+    {% for cat in cat_order %}
+      {% set cat_items = prog.items | selectattr('drill.category', 'equalto', cat) | list %}
+      {% if cat_items %}
+      <div style="margin-bottom:16px;">
+        <!-- カテゴリーヘッダー -->
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding-bottom:6px;
+                    border-bottom:2px solid rgba(0,0,0,.06);">
+          <span class="cat-badge cat-{{ cat }}" style="font-size:.68rem;padding:3px 10px;">{{ cat }}</span>
+          <span style="font-size:.72rem;color:var(--dm-muted);">{{ cat_items|length }}種目</span>
+        </div>
+        <!-- ドリルリスト -->
+        {% for item in cat_items %}
+        <a href="{{ url_for('player_drill_detail', aid=0) if false else '#' }}"
+           onclick="event.preventDefault();"
+           style="display:flex;align-items:center;gap:12px;background:var(--dm-light);
+                  border-radius:8px;padding:12px 14px;margin-bottom:6px;text-decoration:none;
+                  border:1px solid rgba(0,0,0,.04);">
+          <!-- サムネイル -->
+          {% if item.drill.image_file %}
+          <img src="{{ url_for('serve_upload', filename=item.drill.image_file) }}"
+               style="width:48px;height:36px;object-fit:cover;border-radius:5px;flex-shrink:0;">
+          {% else %}
+          <div style="width:48px;height:36px;background:rgba(0,0,0,.08);border-radius:5px;
+                      display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <i class="bi bi-play-circle" style="color:var(--dm-muted);font-size:1.1rem;"></i>
+          </div>
+          {% endif %}
+          <!-- ドリル情報 -->
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:700;font-size:.85rem;color:var(--dm-navy);">{{ item.drill.title }}</div>
+            {% if item.note %}
+            <div style="font-size:.72rem;color:var(--dm-blue);margin-top:2px;">{{ item.note }}</div>
+            {% endif %}
+          </div>
+          <!-- セット×回数 -->
+          <div style="flex-shrink:0;text-align:right;">
+            <div style="font-size:1rem;font-weight:900;color:var(--dm-navy);line-height:1.1;">
+              {{ item.sets }}<span style="font-size:.65rem;font-weight:600;color:var(--dm-muted);">セット</span>
+            </div>
+            <div style="font-size:.8rem;font-weight:700;color:var(--dm-blue);">
+              {{ item.reps }}<span style="font-size:.65rem;font-weight:600;color:var(--dm-muted);">回</span>
+            </div>
+          </div>
+        </a>
+        {% endfor %}
+      </div>
+      {% endif %}
+    {% endfor %}
+  </div>
+  {% else %}
+  <div style="padding:24px;text-align:center;color:var(--dm-muted);font-size:.83rem;">
+    <i class="bi bi-journal-x" style="font-size:1.5rem;display:block;margin-bottom:6px;opacity:.3;"></i>
+    ドリルが設定されていません
+  </div>
+  {% endif %}
+</div>
+{% endfor %}
+
+{% else %}
+<div class="dm-card" style="padding:48px 20px;text-align:center;color:var(--dm-muted);">
+  <i class="bi bi-journal-text" style="font-size:2.5rem;display:block;margin-bottom:12px;opacity:.2;"></i>
+  <div style="font-size:.88rem;">まだプログラムがありません</div>
+  <div style="font-size:.75rem;margin-top:4px;">コーチがプログラムを作成すると、ここに表示されます</div>
+</div>
+{% endif %}
+
+{% endblock %}
