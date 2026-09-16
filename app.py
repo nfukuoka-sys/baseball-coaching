@@ -888,8 +888,22 @@ def create_program(pid):
                            description=desc or None, created_by=current_user.id)
     db.session.add(prog)
     db.session.commit()
-    flash('プログラムを作成しました', 'success')
-    return redirect(url_for('player_detail', player_id=pid) + '#programs')
+    return redirect(url_for('program_edit', pid=pid, prog_id=prog.id))
+
+
+@app.route('/coach/players/<int:pid>/programs/<int:prog_id>/edit')
+@login_required
+@coach_required
+def program_edit(pid, prog_id):
+    player  = User.query.get_or_404(pid)
+    prog    = TrainingProgram.query.get_or_404(prog_id)
+    drills_by_cat = {}
+    for cat in CATEGORIES:
+        drills_by_cat[cat] = Drill.query.filter_by(category=cat)\
+                                        .order_by(Drill.title).all()
+    return render_template('coach/program_edit.html',
+                           player=player, prog=prog,
+                           drills_by_cat=drills_by_cat, categories=CATEGORIES)
 
 
 @app.route('/coach/players/<int:pid>/programs/<int:prog_id>/delete', methods=['POST'])
@@ -907,7 +921,7 @@ def delete_program(pid, prog_id):
 @login_required
 @coach_required
 def add_program_item(pid, prog_id):
-    prog = TrainingProgram.query.get_or_404(prog_id)
+    TrainingProgram.query.get_or_404(prog_id)
     drill_id = request.form.get('drill_id', type=int)
     sets = request.form.get('sets', 3, type=int)
     reps = request.form.get('reps', '10').strip()
@@ -918,8 +932,7 @@ def add_program_item(pid, prog_id):
                        reps=reps, note=note or None, order_num=max_order + 1)
     db.session.add(item)
     db.session.commit()
-    flash('ドリルを追加しました', 'success')
-    return redirect(url_for('player_detail', player_id=pid) + '#programs')
+    return redirect(url_for('program_edit', pid=pid, prog_id=prog_id))
 
 
 @app.route('/coach/programs/items/<int:item_id>/update', methods=['POST'])
@@ -927,12 +940,12 @@ def add_program_item(pid, prog_id):
 @coach_required
 def update_program_item(item_id):
     item = ProgramItem.query.get_or_404(item_id)
-    pid = TrainingProgram.query.get(item.program_id).player_id
+    prog = TrainingProgram.query.get(item.program_id)
     item.sets = request.form.get('sets', item.sets, type=int)
     item.reps = request.form.get('reps', item.reps).strip()
     item.note = request.form.get('note', '').strip() or None
     db.session.commit()
-    return redirect(url_for('player_detail', player_id=pid) + '#programs')
+    return redirect(url_for('program_edit', pid=prog.player_id, prog_id=prog.id))
 
 
 @app.route('/coach/programs/items/<int:item_id>/delete', methods=['POST'])
@@ -940,11 +953,11 @@ def update_program_item(item_id):
 @coach_required
 def delete_program_item(item_id):
     item = ProgramItem.query.get_or_404(item_id)
-    pid = TrainingProgram.query.get(item.program_id).player_id
+    prog = TrainingProgram.query.get(item.program_id)
+    pid, prog_id = prog.player_id, prog.id
     db.session.delete(item)
     db.session.commit()
-    flash('ドリルを削除しました', 'success')
-    return redirect(url_for('player_detail', player_id=pid) + '#programs')
+    return redirect(url_for('program_edit', pid=pid, prog_id=prog_id))
 
 
 # ─── Coach: Drills ────────────────────────────────────────────────────────────
