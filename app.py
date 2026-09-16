@@ -922,15 +922,22 @@ def delete_program(pid, prog_id):
 @coach_required
 def add_program_item(pid, prog_id):
     TrainingProgram.query.get_or_404(prog_id)
-    drill_id = request.form.get('drill_id', type=int)
+    drill_ids = request.form.getlist('drill_id')
     sets = request.form.get('sets', 3, type=int)
     reps = request.form.get('reps', '10').strip()
     note = request.form.get('note', '').strip()
     max_order = db.session.query(db.func.max(ProgramItem.order_num))\
                           .filter_by(program_id=prog_id).scalar() or 0
-    item = ProgramItem(program_id=prog_id, drill_id=drill_id, sets=sets,
-                       reps=reps, note=note or None, order_num=max_order + 1)
-    db.session.add(item)
+    added = 0
+    for did in drill_ids:
+        try:
+            did = int(did)
+        except (ValueError, TypeError):
+            continue
+        max_order += 1
+        db.session.add(ProgramItem(program_id=prog_id, drill_id=did, sets=sets,
+                                   reps=reps, note=note or None, order_num=max_order))
+        added += 1
     db.session.commit()
     return redirect(url_for('program_edit', pid=pid, prog_id=prog_id))
 
