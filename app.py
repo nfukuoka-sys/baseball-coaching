@@ -949,21 +949,20 @@ def delete_program(pid, prog_id):
 def add_program_item(pid, prog_id):
     TrainingProgram.query.get_or_404(prog_id)
     drill_ids = request.form.getlist('drill_id')
-    sets = request.form.get('sets', 3, type=int)
-    reps = request.form.get('reps', '10').strip()
-    note = request.form.get('note', '').strip()
+    sets_list = request.form.getlist('sets')
+    reps_list = request.form.getlist('reps')
     max_order = db.session.query(db.func.max(ProgramItem.order_num))\
                           .filter_by(program_id=prog_id).scalar() or 0
-    added = 0
-    for did in drill_ids:
+    for i, did_str in enumerate(drill_ids):
         try:
-            did = int(did)
+            did  = int(did_str)
+            sets = int(sets_list[i]) if i < len(sets_list) else 3
+            reps = (reps_list[i].strip() if i < len(reps_list) else '') or '10'
         except (ValueError, TypeError):
             continue
         max_order += 1
-        db.session.add(ProgramItem(program_id=prog_id, drill_id=did, sets=sets,
-                                   reps=reps, note=note or None, order_num=max_order))
-        added += 1
+        db.session.add(ProgramItem(program_id=prog_id, drill_id=did,
+                                   sets=sets, reps=reps, order_num=max_order))
     db.session.commit()
     return redirect(url_for('program_edit', pid=pid, prog_id=prog_id))
 

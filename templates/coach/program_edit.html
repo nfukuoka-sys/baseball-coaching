@@ -2,7 +2,6 @@
 {% block title %}{{ prog.name }} — プログラム編集{% endblock %}
 {% block content %}
 
-<!-- ヘッダー -->
 <div style="margin-bottom:10px;">
   <a href="{{ url_for('player_detail', player_id=player.id) }}#programs"
      style="color:var(--dm-muted);font-size:.78rem;text-decoration:none;">
@@ -17,7 +16,7 @@
     <div style="font-size:.78rem;color:var(--dm-muted);margin-top:3px;">{{ prog.description }}</div>
     {% endif %}
     <div style="font-size:.68rem;color:var(--dm-muted);margin-top:3px;">
-      <i class="bi bi-person me-1"></i>{{ player.name }} &nbsp;|&nbsp; 作成: {{ prog.created_at.strftime('%Y/%m/%d') }}
+      <i class="bi bi-person me-1"></i>{{ player.name }} &nbsp;|&nbsp; {{ prog.created_at.strftime('%Y/%m/%d') }}
     </div>
   </div>
   <form method="POST" action="{{ url_for('delete_program', pid=player.id, prog_id=prog.id) }}">
@@ -29,7 +28,6 @@
   </form>
 </div>
 
-<!-- カテゴリーセクション -->
 {% set cat_order = ['投球','打撃','プライオボール','スタビリティ','モビリティ','ストレングス','コンディショニング','その他'] %}
 
 {% for cat in cat_order %}
@@ -38,10 +36,10 @@
 {% set sec = loop.index %}
 
 <div class="dm-card" style="margin-bottom:14px;">
-  <!-- セクションヘッダー -->
+  <!-- ヘッダー -->
   <div style="padding:14px 18px 10px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--dm-border);">
     <span class="cat-badge cat-{{ cat }}" style="font-size:.72rem;padding:4px 12px;">{{ cat }}</span>
-    <span style="font-size:.75rem;color:var(--dm-muted);flex:1;" id="count-{{ sec }}">
+    <span style="font-size:.75rem;color:var(--dm-muted);flex:1;">
       {% if cat_items %}{{ cat_items|length }}種目{% else %}未追加{% endif %}
     </span>
     {% if cat_drills %}
@@ -70,11 +68,8 @@
       {% endif %}
       <div style="flex:1;min-width:0;">
         <div style="font-weight:700;font-size:.85rem;color:var(--dm-navy);">{{ item.drill.title }}</div>
-        {% if item.note %}
-        <div style="font-size:.72rem;color:var(--dm-blue);margin-top:2px;">{{ item.note }}</div>
-        {% endif %}
+        {% if item.note %}<div style="font-size:.72rem;color:var(--dm-blue);margin-top:2px;">{{ item.note }}</div>{% endif %}
       </div>
-      <!-- インライン編集 -->
       <form method="POST" action="{{ url_for('update_program_item', item_id=item.id) }}"
             style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
         <div style="text-align:center;">
@@ -86,7 +81,7 @@
         <div style="font-size:.8rem;color:var(--dm-muted);padding-bottom:12px;">×</div>
         <div style="text-align:center;">
           <input type="text" name="reps" value="{{ item.reps }}"
-                 style="width:52px;border:1.5px solid #d1d5db;border-radius:5px;padding:4px;
+                 style="width:54px;border:1.5px solid #d1d5db;border-radius:5px;padding:4px;
                         font-size:.85rem;font-weight:700;text-align:center;color:var(--dm-navy);">
           <div style="font-size:.6rem;color:var(--dm-muted);margin-top:1px;">回 / 秒</div>
         </div>
@@ -110,29 +105,28 @@
   </div>
   {% endif %}
 
-  <!-- ドリルピッカー（複数選択） -->
+  <!-- ドリルピッカー -->
   {% if cat_drills %}
   {% set added_ids = cat_items | map(attribute='drill_id') | list %}
   <div id="picker-{{ sec }}" style="display:none;border-top:1px solid var(--dm-border);">
-    <!-- ドリルグリッド -->
-    <div style="padding:14px 18px 10px;background:var(--dm-light);">
-      <div style="font-size:.72rem;font-weight:700;letter-spacing:.1em;color:var(--dm-muted);margin-bottom:10px;">
-        複数選択して一括追加できます
+
+    <!-- ① ドリル選択グリッド -->
+    <div style="padding:14px 18px 12px;background:var(--dm-light);">
+      <div style="font-size:.7rem;font-weight:700;letter-spacing:.1em;color:var(--dm-muted);margin-bottom:10px;">
+        ドリルをタップして選択（複数可）
       </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;">
         {% for drill in cat_drills %}
         {% set already = drill.id in added_ids %}
         <div id="card-{{ sec }}-{{ drill.id }}"
-             onclick="toggleCard({{ sec }}, {{ drill.id }}, {{ 'true' if already else 'false' }})"
+             onclick="toggleCard({{ sec }}, {{ drill.id }}, '{{ drill.title|replace("'","\\'")|replace('"','\\"') }}', {{ 'true' if already else 'false' }})"
              style="background:#fff;border:2px solid {{ '#a7f3d0' if already else 'rgba(0,0,0,.08)' }};
-                    border-radius:8px;cursor:pointer;overflow:hidden;transition:.15s;position:relative;
-                    user-select:none;">
-          <!-- チェックマーク -->
+                    border-radius:8px;cursor:pointer;overflow:hidden;transition:border-color .15s;position:relative;user-select:none;">
           <div id="check-{{ sec }}-{{ drill.id }}"
-               style="position:absolute;top:5px;left:5px;width:20px;height:20px;border-radius:50%;
-                      background:{{ '#2563eb' if already else 'rgba(0,0,0,.15)' }};
+               style="position:absolute;top:5px;left:5px;width:18px;height:18px;border-radius:50%;
+                      background:{{ '#059669' if already else 'rgba(0,0,0,.18)' }};
                       display:flex;align-items:center;justify-content:center;z-index:1;transition:.15s;">
-            <i class="bi bi-check" style="color:#fff;font-size:.75rem;"></i>
+            <i class="bi bi-check" style="color:#fff;font-size:.7rem;"></i>
           </div>
           {% if already %}
           <div style="position:absolute;top:5px;right:5px;background:#059669;color:#fff;
@@ -155,49 +149,33 @@
       </div>
     </div>
 
-    <!-- 追加フォーム（常に表示、選択数カウンター付き） -->
-    <form method="POST" action="{{ url_for('add_program_item', pid=player.id, prog_id=prog.id) }}"
-          id="add-form-{{ sec }}" style="padding:14px 18px;background:#fff;border-top:1px solid var(--dm-border);">
-      <!-- 選択されたドリルIDはJSで動的に追加 -->
-      <div id="hidden-inputs-{{ sec }}"></div>
-
-      <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;">
-        <div style="background:var(--dm-light);border-radius:8px;padding:8px 14px;
-                    font-size:.8rem;font-weight:700;color:var(--dm-navy);white-space:nowrap;">
-          <span id="sel-count-{{ sec }}" style="font-size:1.2rem;color:var(--dm-blue);">0</span> 種目選択中
-        </div>
-        <div style="text-align:center;">
-          <label style="font-size:.65rem;color:var(--dm-muted);display:block;margin-bottom:3px;letter-spacing:.08em;">セット数</label>
-          <input type="number" name="sets" value="3" min="1" max="99"
-                 style="width:60px;border:1.5px solid #d1d5db;border-radius:6px;padding:7px 5px;
-                        font-size:1.1rem;font-weight:800;text-align:center;color:var(--dm-navy);">
-        </div>
-        <div style="font-size:1.1rem;color:var(--dm-muted);padding-bottom:8px;">×</div>
-        <div style="text-align:center;">
-          <label style="font-size:.65rem;color:var(--dm-muted);display:block;margin-bottom:3px;letter-spacing:.08em;">回数 / 時間</label>
-          <input type="text" name="reps" value="10"
-                 style="width:76px;border:1.5px solid #d1d5db;border-radius:6px;padding:7px 5px;
-                        font-size:1.1rem;font-weight:800;text-align:center;color:var(--dm-navy);"
-                 placeholder="10 / 30秒">
-        </div>
-        <div style="flex:1;min-width:120px;">
-          <label style="font-size:.65rem;color:var(--dm-muted);display:block;margin-bottom:3px;letter-spacing:.08em;">メモ（任意）</label>
-          <input type="text" name="note" class="dm-input" placeholder="フォームの注意点など">
-        </div>
-        <button type="submit" id="add-btn-{{ sec }}" class="btn-dm"
-                style="flex-shrink:0;padding:9px 20px;opacity:.4;pointer-events:none;">
-          <i class="bi bi-plus-lg"></i> 追加する
-        </button>
+    <!-- ② 選択済みドリルの個別設定 -->
+    <div id="sel-container-{{ sec }}" style="display:none;padding:14px 18px;border-top:1px solid var(--dm-border);background:#fff;">
+      <div style="font-size:.72rem;font-weight:700;letter-spacing:.08em;color:var(--dm-muted);margin-bottom:10px;">
+        <i class="bi bi-ui-checks me-1"></i>セット数・回数を設定して追加
       </div>
-    </form>
+
+      <form method="POST" action="{{ url_for('add_program_item', pid=player.id, prog_id=prog.id) }}">
+        <!-- 選択ドリルの行がJSで挿入される -->
+        <div id="sel-list-{{ sec }}"></div>
+
+        <div style="display:flex;justify-content:flex-end;margin-top:12px;">
+          <button type="submit" id="add-btn-{{ sec }}" class="btn-dm"
+                  style="opacity:.4;pointer-events:none;padding:9px 22px;">
+            <i class="bi bi-plus-lg"></i>
+            <span id="sel-count-{{ sec }}">0</span>種目を追加する
+          </button>
+        </div>
+      </form>
+    </div>
+
   </div>
   {% endif %}
 </div>
 {% endfor %}
 
 <script>
-// sec → Set of selected drill IDs
-var selections = {};
+var selections = {}; // sec -> Map(drillId -> name)
 
 function togglePicker(sec) {
   var el = document.getElementById('picker-' + sec);
@@ -206,64 +184,105 @@ function togglePicker(sec) {
     el.style.display = 'block';
   } else {
     el.style.display = 'none';
-    clearSelection(sec);
+    clearSec(sec);
   }
 }
 
-function toggleCard(sec, drillId, alreadyAdded) {
-  if (!selections[sec]) selections[sec] = new Set();
-  var card  = document.getElementById('card-' + sec + '-' + drillId);
+function toggleCard(sec, drillId, drillName, alreadyAdded) {
+  if (!selections[sec]) selections[sec] = new Map();
+  var card  = document.getElementById('card-'  + sec + '-' + drillId);
   var check = document.getElementById('check-' + sec + '-' + drillId);
+
   if (selections[sec].has(drillId)) {
+    // 選択解除
     selections[sec].delete(drillId);
+    var row = document.getElementById('sel-row-' + sec + '-' + drillId);
+    if (row) row.remove();
     card.style.borderColor  = alreadyAdded ? '#a7f3d0' : 'rgba(0,0,0,.08)';
-    check.style.background  = alreadyAdded ? '#059669' : 'rgba(0,0,0,.15)';
+    check.style.background  = alreadyAdded ? '#059669' : 'rgba(0,0,0,.18)';
   } else {
-    selections[sec].add(drillId);
+    // 選択
+    selections[sec].set(drillId, drillName);
+    appendRow(sec, drillId, drillName);
     card.style.borderColor  = '#2563eb';
     check.style.background  = '#2563eb';
   }
-  updateForm(sec);
+  refreshUI(sec);
 }
 
-function updateForm(sec) {
-  var sel    = selections[sec] || new Set();
-  var count  = sel.size;
-  var countEl = document.getElementById('sel-count-' + sec);
-  var btn     = document.getElementById('add-btn-' + sec);
-  var hidden  = document.getElementById('hidden-inputs-' + sec);
-  if (countEl) countEl.textContent = count;
+function appendRow(sec, drillId, drillName) {
+  var list = document.getElementById('sel-list-' + sec);
+  if (!list) return;
+
+  var row = document.createElement('div');
+  row.id = 'sel-row-' + sec + '-' + drillId;
+  row.style.cssText = [
+    'display:flex', 'align-items:center', 'gap:8px',
+    'background:#F9FAFB', 'border-radius:8px', 'padding:10px 12px',
+    'margin-bottom:7px', 'border:1px solid rgba(0,0,0,.07)'
+  ].join(';');
+
+  row.innerHTML =
+    '<input type="hidden" name="drill_id" value="' + drillId + '">' +
+    '<div style="flex:1;font-size:.83rem;font-weight:700;min-width:0;' +
+         'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + drillName + '</div>' +
+    '<div style="display:flex;align-items:center;gap:3px;flex-shrink:0;">' +
+      '<input type="number" name="sets" value="3" min="1" max="99"' +
+             ' style="width:46px;border:1.5px solid #d1d5db;border-radius:5px;' +
+             'padding:5px 4px;font-size:.9rem;font-weight:800;text-align:center;color:#1a2744;">' +
+      '<span style="font-size:.68rem;color:#9CA3AF;">set</span>' +
+    '</div>' +
+    '<span style="color:#9CA3AF;">×</span>' +
+    '<div style="display:flex;align-items:center;gap:3px;flex-shrink:0;">' +
+      '<input type="text" name="reps" value="10"' +
+             ' style="width:54px;border:1.5px solid #d1d5db;border-radius:5px;' +
+             'padding:5px 4px;font-size:.9rem;font-weight:800;text-align:center;color:#1a2744;"' +
+             ' placeholder="10回">' +
+      '<span style="font-size:.68rem;color:#9CA3AF;">回</span>' +
+    '</div>' +
+    '<button type="button" onclick="removeRow(' + sec + ',' + drillId + ')"' +
+            ' style="background:none;border:1px solid #fca5a5;color:#dc2626;' +
+            'border-radius:5px;padding:4px 7px;font-size:.72rem;cursor:pointer;flex-shrink:0;">✕</button>';
+
+  list.appendChild(row);
+}
+
+function removeRow(sec, drillId) {
+  if (selections[sec]) selections[sec].delete(drillId);
+  var row  = document.getElementById('sel-row-'  + sec + '-' + drillId);
+  var card = document.getElementById('card-'     + sec + '-' + drillId);
+  var check= document.getElementById('check-'    + sec + '-' + drillId);
+  if (row)   row.remove();
+  if (card)  card.style.borderColor = 'rgba(0,0,0,.08)';
+  if (check) check.style.background  = 'rgba(0,0,0,.18)';
+  refreshUI(sec);
+}
+
+function refreshUI(sec) {
+  var count = selections[sec] ? selections[sec].size : 0;
+  var countEl    = document.getElementById('sel-count-'     + sec);
+  var btn        = document.getElementById('add-btn-'       + sec);
+  var container  = document.getElementById('sel-container-' + sec);
+  if (countEl)   countEl.textContent  = count;
   if (btn) {
-    if (count > 0) {
-      btn.style.opacity = '1';
-      btn.style.pointerEvents = 'auto';
-    } else {
-      btn.style.opacity = '.4';
-      btn.style.pointerEvents = 'none';
-    }
+    btn.style.opacity       = count > 0 ? '1'    : '.4';
+    btn.style.pointerEvents = count > 0 ? 'auto' : 'none';
   }
-  if (hidden) {
-    hidden.innerHTML = '';
-    sel.forEach(function(id) {
-      var inp = document.createElement('input');
-      inp.type = 'hidden';
-      inp.name = 'drill_id';
-      inp.value = id;
-      hidden.appendChild(inp);
-    });
-  }
+  if (container) container.style.display = count > 0 ? 'block' : 'none';
 }
 
-function clearSelection(sec) {
+function clearSec(sec) {
   if (!selections[sec]) return;
-  selections[sec].forEach(function(id) {
-    var card  = document.getElementById('card-' + sec + '-' + id);
+  selections[sec].forEach(function(name, id) {
+    var card  = document.getElementById('card-'  + sec + '-' + id);
     var check = document.getElementById('check-' + sec + '-' + id);
     if (card)  card.style.borderColor = 'rgba(0,0,0,.08)';
-    if (check) check.style.background  = 'rgba(0,0,0,.15)';
+    if (check) check.style.background  = 'rgba(0,0,0,.18)';
   });
-  selections[sec] = new Set();
-  updateForm(sec);
+  selections[sec] = new Map();
+  var list = document.getElementById('sel-list-' + sec);
+  if (list) list.innerHTML = '';
+  refreshUI(sec);
 }
 </script>
 
