@@ -1418,19 +1418,6 @@ def debug_migrate():
     return json.dumps(results)
 
 
-@app.route('/debug/program_items')
-def debug_program_items():
-    import json, sqlite3 as _sqlite3
-    db_path = os.path.join(DATA_DIR, 'baseball.db')
-    con = _sqlite3.connect(db_path)
-    cur = con.cursor()
-    cur.execute("SELECT id, program_id, drill_id, sets, reps, day_of_week FROM program_item ORDER BY program_id, day_of_week, id")
-    rows = [{'id': r[0], 'program_id': r[1], 'drill_id': r[2], 'sets': r[3], 'reps': r[4], 'day_of_week': r[5]} for r in cur.fetchall()]
-    cur.execute("SELECT tp.id, tp.name, tp.player_id, tp.is_active, u.name as player_name, u.email FROM training_program tp JOIN user u ON u.id=tp.player_id ORDER BY tp.id")
-    programs = [{'id': r[0], 'name': r[1], 'player_id': r[2], 'is_active': r[3], 'player_name': r[4], 'player_email': r[5]} for r in cur.fetchall()]
-    con.close()
-    return json.dumps({'programs': programs, 'items': rows}, ensure_ascii=False)
-
 
 @app.route('/uploads/<path:filepath>')
 def uploaded_file(filepath):
