@@ -13,7 +13,24 @@
 </div>
 
 {% if programs %}
+
+{# 曜日タブ #}
+<div style="display:flex;gap:4px;overflow-x:auto;padding-bottom:4px;margin-bottom:16px;-webkit-overflow-scrolling:touch;">
+  {% for d in days %}
+  {% set idx = loop.index0 %}
+  {% set is_today = (idx == today_dow) %}
+  {% set is_active_tab = (selected_day | default(today_dow | string) == idx | string) %}
+  <button onclick="showDay({{ idx }})" id="tab-{{ idx }}"
+          style="flex-shrink:0;padding:7px 16px;border-radius:20px;font-size:.82rem;font-weight:700;
+                 cursor:pointer;border:none;transition:.15s;
+                 {% if is_today %}outline:2px solid var(--dm-navy);outline-offset:2px;{% endif %}">
+    {{ d }}曜日
+  </button>
+  {% endfor %}
+</div>
+
 {% set cat_order = ['投球','打撃','プライオボール','スタビリティ','モビリティ','ストレングス','コンディショニング','その他'] %}
+
 {% for prog in programs %}
 <div class="dm-card" style="margin-bottom:20px;">
   <div style="padding:18px 20px 12px;">
@@ -26,63 +43,68 @@
     </div>
   </div>
 
-  {% if prog.items %}
-  <div style="padding:0 20px 18px;">
+  {% for d in days %}
+  {% set didx = loop.index0 %}
+  {% set day_cat_items = namespace(total=0) %}
+  {% for cat in cat_order %}
+    {% set ci = prog.items | selectattr('drill.category','equalto',cat) | selectattr('day_of_week','equalto',didx) | list %}
+    {% set day_cat_items.total = day_cat_items.total + ci|length %}
+  {% endfor %}
+
+  <div class="day-pane" data-day="{{ didx }}"
+       style="display:none;padding:0 20px 18px;">
+    {% if day_cat_items.total == 0 %}
+    <div style="padding:20px 0;text-align:center;color:var(--dm-muted);font-size:.8rem;">
+      <i class="bi bi-calendar-x" style="font-size:1.3rem;display:block;margin-bottom:6px;opacity:.3;"></i>
+      {{ d }}曜日のメニューはありません
+    </div>
+    {% else %}
     {% for cat in cat_order %}
-      {% set cat_items = prog.items | selectattr('drill.category', 'equalto', cat) | list %}
-      {% if cat_items %}
-      <div style="margin-bottom:16px;">
-        <!-- カテゴリーヘッダー -->
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding-bottom:6px;
-                    border-bottom:2px solid rgba(0,0,0,.06);">
-          <span class="cat-badge cat-{{ cat }}" style="font-size:.68rem;padding:3px 10px;">{{ cat }}</span>
-          <span style="font-size:.72rem;color:var(--dm-muted);">{{ cat_items|length }}種目</span>
-        </div>
-        <!-- ドリルリスト -->
-        {% for item in cat_items %}
-        <a href="{{ url_for('player_drill_detail', aid=0) if false else '#' }}"
-           onclick="event.preventDefault();"
-           style="display:flex;align-items:center;gap:12px;background:var(--dm-light);
-                  border-radius:8px;padding:12px 14px;margin-bottom:6px;text-decoration:none;
-                  border:1px solid rgba(0,0,0,.04);">
-          <!-- サムネイル -->
-          {% if item.drill.image_file %}
-          <img src="{{ url_for('uploaded_file', filename=item.drill.image_file) }}"
-               style="width:48px;height:36px;object-fit:cover;border-radius:5px;flex-shrink:0;">
-          {% else %}
-          <div style="width:48px;height:36px;background:rgba(0,0,0,.08);border-radius:5px;
-                      display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-            <i class="bi bi-play-circle" style="color:var(--dm-muted);font-size:1.1rem;"></i>
-          </div>
-          {% endif %}
-          <!-- ドリル情報 -->
-          <div style="flex:1;min-width:0;">
-            <div style="font-weight:700;font-size:.85rem;color:var(--dm-navy);">{{ item.drill.title }}</div>
-            {% if item.note %}
-            <div style="font-size:.72rem;color:var(--dm-blue);margin-top:2px;">{{ item.note }}</div>
-            {% endif %}
-          </div>
-          <!-- セット×回数 -->
-          <div style="flex-shrink:0;text-align:right;">
-            <div style="font-size:1rem;font-weight:900;color:var(--dm-navy);line-height:1.1;">
-              {{ item.sets }}<span style="font-size:.65rem;font-weight:600;color:var(--dm-muted);">セット</span>
-            </div>
-            <div style="font-size:.8rem;font-weight:700;color:var(--dm-blue);">
-              {{ item.reps }}<span style="font-size:.65rem;font-weight:600;color:var(--dm-muted);">回</span>
-            </div>
-          </div>
-        </a>
-        {% endfor %}
+    {% set cat_items = prog.items | selectattr('drill.category','equalto',cat)
+                                  | selectattr('day_of_week','equalto',didx) | list %}
+    {% if cat_items %}
+    <div style="margin-bottom:16px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding-bottom:6px;
+                  border-bottom:2px solid rgba(0,0,0,.06);">
+        <span class="cat-badge cat-{{ cat }}" style="font-size:.68rem;padding:3px 10px;">{{ cat }}</span>
+        <span style="font-size:.72rem;color:var(--dm-muted);">{{ cat_items|length }}種目</span>
       </div>
-      {% endif %}
+      {% for item in cat_items %}
+      <div style="display:flex;align-items:center;gap:12px;background:var(--dm-light);
+                  border-radius:8px;padding:12px 14px;margin-bottom:6px;
+                  border:1px solid rgba(0,0,0,.04);">
+        {% if item.drill.image_file %}
+        <img src="{{ url_for('uploaded_file', filename=item.drill.image_file) }}"
+             style="width:48px;height:36px;object-fit:cover;border-radius:5px;flex-shrink:0;">
+        {% else %}
+        <div style="width:48px;height:36px;background:rgba(0,0,0,.08);border-radius:5px;
+                    display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="bi bi-play-circle" style="color:var(--dm-muted);font-size:1.1rem;"></i>
+        </div>
+        {% endif %}
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:700;font-size:.85rem;color:var(--dm-navy);">{{ item.drill.title }}</div>
+          {% if item.note %}
+          <div style="font-size:.72rem;color:var(--dm-blue);margin-top:2px;">{{ item.note }}</div>
+          {% endif %}
+        </div>
+        <div style="flex-shrink:0;text-align:right;">
+          <div style="font-size:1rem;font-weight:900;color:var(--dm-navy);line-height:1.1;">
+            {{ item.sets }}<span style="font-size:.65rem;font-weight:600;color:var(--dm-muted);">セット</span>
+          </div>
+          <div style="font-size:.8rem;font-weight:700;color:var(--dm-blue);">
+            {{ item.reps }}<span style="font-size:.65rem;font-weight:600;color:var(--dm-muted);">回</span>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
     {% endfor %}
+    {% endif %}
   </div>
-  {% else %}
-  <div style="padding:24px;text-align:center;color:var(--dm-muted);font-size:.83rem;">
-    <i class="bi bi-journal-x" style="font-size:1.5rem;display:block;margin-bottom:6px;opacity:.3;"></i>
-    ドリルが設定されていません
-  </div>
-  {% endif %}
+  {% endfor %}
+
 </div>
 {% endfor %}
 
@@ -93,5 +115,33 @@
   <div style="font-size:.75rem;margin-top:4px;">コーチがプログラムを作成すると、ここに表示されます</div>
 </div>
 {% endif %}
+
+<script>
+var TODAY = {{ today_dow }};
+
+function showDay(idx) {
+  // タブのスタイル切り替え
+  for (var i = 0; i < 7; i++) {
+    var tab = document.getElementById('tab-' + i);
+    if (!tab) continue;
+    if (i === idx) {
+      tab.style.background = 'var(--dm-navy)';
+      tab.style.color = '#fff';
+    } else {
+      tab.style.background = 'var(--dm-light)';
+      tab.style.color = 'var(--dm-muted)';
+      tab.style.border = '1px solid var(--dm-border)';
+    }
+  }
+  // ペインの表示切り替え
+  var panes = document.querySelectorAll('.day-pane');
+  panes.forEach(function(p) {
+    p.style.display = parseInt(p.dataset.day) === idx ? 'block' : 'none';
+  });
+}
+
+// 初期表示：今日の曜日
+showDay(TODAY);
+</script>
 
 {% endblock %}

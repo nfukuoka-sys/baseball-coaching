@@ -289,14 +289,15 @@ class TrainingProgram(db.Model):
 
 
 class ProgramItem(db.Model):
-    id          = db.Column(db.Integer, primary_key=True)
-    program_id  = db.Column(db.Integer, db.ForeignKey('training_program.id'), nullable=False)
-    drill_id    = db.Column(db.Integer, db.ForeignKey('drill.id'), nullable=False)
-    sets        = db.Column(db.Integer, default=3)
-    reps        = db.Column(db.String(50), default='10')
-    order_num   = db.Column(db.Integer, default=0)
-    note        = db.Column(db.Text)
-    drill       = db.relationship('Drill')
+    id           = db.Column(db.Integer, primary_key=True)
+    program_id   = db.Column(db.Integer, db.ForeignKey('training_program.id'), nullable=False)
+    drill_id     = db.Column(db.Integer, db.ForeignKey('drill.id'), nullable=False)
+    sets         = db.Column(db.Integer, default=3)
+    reps         = db.Column(db.String(50), default='10')
+    order_num    = db.Column(db.Integer, default=0)
+    note         = db.Column(db.Text)
+    day_of_week  = db.Column(db.Integer, nullable=True)  # 0=月 1=火 2=水 3=木 4=金 5=土 6=日 None=全曜日
+    drill        = db.relationship('Drill')
 
 
 class Issue(db.Model):
@@ -917,6 +918,8 @@ def create_program(pid):
     return redirect(url_for('program_edit', pid=pid, prog_id=prog.id))
 
 
+DAYS = ['月', '火', '水', '木', '金', '土', '日']
+
 @app.route('/coach/players/<int:pid>/programs/<int:prog_id>/edit')
 @login_required
 @coach_required
@@ -929,7 +932,8 @@ def program_edit(pid, prog_id):
                                         .order_by(Drill.title).all()
     return render_template('coach/program_edit.html',
                            player=player, prog=prog,
-                           drills_by_cat=drills_by_cat, categories=CATEGORIES)
+                           drills_by_cat=drills_by_cat, categories=CATEGORIES,
+                           days=DAYS)
 
 
 @app.route('/coach/players/<int:pid>/programs/<int:prog_id>/delete', methods=['POST'])
@@ -951,6 +955,8 @@ def add_program_item(pid, prog_id):
     drill_ids = request.form.getlist('drill_id')
     sets_list = request.form.getlist('sets')
     reps_list = request.form.getlist('reps')
+    day_str   = request.form.get('day_of_week', '').strip()
+    day_of_week = int(day_str) if day_str.isdigit() else None
     max_order = db.session.query(db.func.max(ProgramItem.order_num))\
                           .filter_by(program_id=prog_id).scalar() or 0
     for i, did_str in enumerate(drill_ids):
@@ -962,9 +968,11 @@ def add_program_item(pid, prog_id):
             continue
         max_order += 1
         db.session.add(ProgramItem(program_id=prog_id, drill_id=did,
-                                   sets=sets, reps=reps, order_num=max_order))
+                                   sets=sets, reps=reps, order_num=max_order,
+                                   day_of_week=day_of_week))
     db.session.commit()
-    return redirect(url_for('program_edit', pid=pid, prog_id=prog_id))
+    active_day = day_str if day_str.isdigit() else ''
+    return redirect(url_for('program_edit', pid=pid, prog_id=prog_id, day=active_day))
 
 
 @app.route('/coach/programs/items/<int:item_id>/update', methods=['POST'])
@@ -976,8 +984,12 @@ def update_program_item(item_id):
     item.sets = request.form.get('sets', item.sets, type=int)
     item.reps = request.form.get('reps', item.reps).strip()
     item.note = request.form.get('note', '').strip() or None
+    day_str = request.form.get('day_of_week', '').strip()
+    if day_str.isdigit():
+        item.day_of_week = int(day_str)
     db.session.commit()
-    return redirect(url_for('program_edit', pid=prog.player_id, prog_id=prog.id))
+    active_day = str(item.day_of_week) if item.day_of_week is not None else ''
+    return redirect(url_for('program_edit', pid=prog.player_id, prog_id=prog.id, day=active_day))
 
 
 @app.route('/coach/programs/items/<int:item_id>/delete', methods=['POST'])
@@ -987,9 +999,10 @@ def delete_program_item(item_id):
     item = ProgramItem.query.get_or_404(item_id)
     prog = TrainingProgram.query.get(item.program_id)
     pid, prog_id = prog.player_id, prog.id
+    day = str(item.day_of_week) if item.day_of_week is not None else ''
     db.session.delete(item)
     db.session.commit()
-    return redirect(url_for('program_edit', pid=pid, prog_id=prog_id))
+    return redirect(url_for('program_edit', pid=pid, prog_id=prog_id, day=day))
 
 
 # ─── Coach: Drills ────────────────────────────────────────────────────────────
@@ -1110,10 +1123,13 @@ def player_drill_detail(aid):
 def player_programs():
     if current_user.role == 'coach':
         return redirect(url_for('coach_dashboard'))
+    from datetime import datetime as _dt
     programs = TrainingProgram.query.filter_by(
         player_id=current_user.id, is_active=True
     ).order_by(TrainingProgram.created_at.desc()).all()
-    return render_template('player/programs.html', programs=programs, categories=CATEGORIES)
+    today_dow = _dt.now().weekday()  # 0=月 6=日
+    return render_template('player/programs.html', programs=programs,
+                           categories=CATEGORIES, days=DAYS, today_dow=today_dow)
 
 
 @app.route('/player/profile')
@@ -1451,9 +1467,16 @@ def debug_migrate():
             sets INTEGER DEFAULT 3,
             reps VARCHAR(50) DEFAULT "10",
             order_num INTEGER DEFAULT 0,
-            note TEXT
+            note TEXT,
+            day_of_week INTEGER
         )''')
         added.append('table:program_item')
+    else:
+        cur.execute("PRAGMA table_info(program_item)")
+        pi_cols = {row[1] for row in cur.fetchall()}
+        if 'day_of_week' not in pi_cols:
+            cur.execute('ALTER TABLE program_item ADD COLUMN day_of_week INTEGER')
+            added.append('program_item.day_of_week')
     con.commit()
     con.close()
     results['added'] = added

@@ -9,7 +9,7 @@
   </a>
 </div>
 
-<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
+<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
   <div>
     <div style="font-size:1.1rem;font-weight:900;color:var(--dm-navy);">{{ prog.name }}</div>
     {% if prog.description %}
@@ -28,15 +28,93 @@
   </form>
 </div>
 
+<!-- 曜日タブ -->
+{% set active_day = request.args.get('day', '') %}
+<div style="display:flex;gap:4px;overflow-x:auto;padding-bottom:4px;margin-bottom:16px;-webkit-overflow-scrolling:touch;">
+  {% for d in days %}
+  {% set idx = loop.index0 | string %}
+  {% set is_active = (active_day == idx) %}
+  <a href="{{ url_for('program_edit', pid=player.id, prog_id=prog.id, day=idx) }}"
+     style="flex-shrink:0;padding:7px 16px;border-radius:20px;font-size:.82rem;font-weight:700;
+            text-decoration:none;transition:.15s;
+            {% if is_active %}background:var(--dm-navy);color:#fff;{% else %}background:var(--dm-light);color:var(--dm-muted);border:1px solid var(--dm-border);{% endif %}">
+    {{ d }}曜日
+  </a>
+  {% endfor %}
+</div>
+
 {% set cat_order = ['投球','打撃','プライオボール','スタビリティ','モビリティ','ストレングス','コンディショニング','その他'] %}
 
+{% if active_day == '' %}
+{# 曜日未選択時 — 全ドリルを曜日バッジ付きで表示 #}
+<div class="dm-card" style="padding:20px;text-align:center;color:var(--dm-muted);margin-bottom:14px;">
+  <i class="bi bi-calendar-week" style="font-size:2rem;display:block;margin-bottom:8px;opacity:.3;"></i>
+  <div style="font-size:.88rem;font-weight:700;">上の曜日タブを選択してドリルを追加してください</div>
+  <div style="font-size:.75rem;margin-top:4px;">各曜日ごとに異なるメニューを設定できます</div>
+</div>
+
+{# 登録済みドリルのサマリーを曜日別に表示 #}
+{% set has_any = namespace(v=false) %}
+{% for d in days %}
+{% set didx = loop.index0 %}
+{% set day_items = prog.items | selectattr('day_of_week', 'equalto', didx) | list %}
+{% if day_items %}{% set has_any.v = true %}
+<div class="dm-card" style="margin-bottom:10px;">
+  <div style="padding:12px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--dm-border);">
+    <span style="background:var(--dm-navy);color:#fff;border-radius:12px;padding:3px 12px;font-size:.78rem;font-weight:700;">{{ d }}曜日</span>
+    <span style="font-size:.75rem;color:var(--dm-muted);">{{ day_items|length }}種目</span>
+    <a href="{{ url_for('program_edit', pid=player.id, prog_id=prog.id, day=didx|string) }}"
+       style="margin-left:auto;font-size:.72rem;color:var(--dm-blue);text-decoration:none;">
+      編集 <i class="bi bi-chevron-right"></i>
+    </a>
+  </div>
+  <div style="padding:10px 16px;display:flex;flex-wrap:wrap;gap:6px;">
+    {% for item in day_items %}
+    <span style="background:var(--dm-light);border:1px solid var(--dm-border);border-radius:6px;
+                 font-size:.72rem;padding:3px 8px;color:var(--dm-navy);">
+      {{ item.drill.title }} <span style="color:var(--dm-muted);">{{ item.sets }}×{{ item.reps }}</span>
+    </span>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+{% endfor %}
+
+{% set none_items = prog.items | selectattr('day_of_week', 'none') | list %}
+{% if none_items %}{% set has_any.v = true %}
+<div class="dm-card" style="margin-bottom:10px;">
+  <div style="padding:12px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--dm-border);">
+    <span style="background:#6b7280;color:#fff;border-radius:12px;padding:3px 12px;font-size:.78rem;font-weight:700;">曜日未設定</span>
+    <span style="font-size:.75rem;color:var(--dm-muted);">{{ none_items|length }}種目</span>
+  </div>
+  <div style="padding:10px 16px;display:flex;flex-wrap:wrap;gap:6px;">
+    {% for item in none_items %}
+    <span style="background:var(--dm-light);border:1px solid var(--dm-border);border-radius:6px;
+                 font-size:.72rem;padding:3px 8px;color:var(--dm-navy);">
+      {{ item.drill.title }} <span style="color:var(--dm-muted);">{{ item.sets }}×{{ item.reps }}</span>
+    </span>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% if not has_any.v %}
+<div style="text-align:center;color:var(--dm-muted);font-size:.8rem;padding:16px 0;">
+  まだドリルが登録されていません
+</div>
+{% endif %}
+
+{% else %}
+{# 曜日選択中 — その曜日のドリルをカテゴリ別に管理 #}
+{% set active_day_int = active_day | int %}
+
 {% for cat in cat_order %}
-{% set cat_items = prog.items | selectattr('drill.category', 'equalto', cat) | list %}
+{% set cat_items = prog.items | selectattr('drill.category', 'equalto', cat)
+                              | selectattr('day_of_week', 'equalto', active_day_int) | list %}
 {% set cat_drills = drills_by_cat[cat] %}
 {% set sec = loop.index %}
 
 <div class="dm-card" style="margin-bottom:14px;">
-  <!-- ヘッダー -->
   <div style="padding:14px 18px 10px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--dm-border);">
     <span class="cat-badge cat-{{ cat }}" style="font-size:.72rem;padding:4px 12px;">{{ cat }}</span>
     <span style="font-size:.75rem;color:var(--dm-muted);flex:1;">
@@ -72,6 +150,7 @@
       </div>
       <form method="POST" action="{{ url_for('update_program_item', item_id=item.id) }}"
             style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+        <input type="hidden" name="day_of_week" value="{{ active_day }}">
         <div style="text-align:center;">
           <input type="number" name="sets" value="{{ item.sets }}" min="1" max="99"
                  style="width:42px;border:1.5px solid #d1d5db;border-radius:5px;padding:4px;
@@ -110,7 +189,6 @@
   {% set added_ids = cat_items | map(attribute='drill_id') | list %}
   <div id="picker-{{ sec }}" style="display:none;border-top:1px solid var(--dm-border);">
 
-    <!-- ① ドリル選択グリッド -->
     <div style="padding:14px 18px 12px;background:var(--dm-light);">
       <div style="font-size:.7rem;font-weight:700;letter-spacing:.1em;color:var(--dm-muted);margin-bottom:10px;">
         ドリルをタップして選択（複数可）
@@ -149,16 +227,13 @@
       </div>
     </div>
 
-    <!-- ② 選択済みドリルの個別設定 -->
     <div id="sel-container-{{ sec }}" style="display:none;padding:14px 18px;border-top:1px solid var(--dm-border);background:#fff;">
       <div style="font-size:.72rem;font-weight:700;letter-spacing:.08em;color:var(--dm-muted);margin-bottom:10px;">
         <i class="bi bi-ui-checks me-1"></i>セット数・回数を設定して追加
       </div>
-
       <form method="POST" action="{{ url_for('add_program_item', pid=player.id, prog_id=prog.id) }}">
-        <!-- 選択ドリルの行がJSで挿入される -->
+        <input type="hidden" name="day_of_week" value="{{ active_day }}">
         <div id="sel-list-{{ sec }}"></div>
-
         <div style="display:flex;justify-content:flex-end;margin-top:12px;">
           <button type="submit" id="add-btn-{{ sec }}" class="btn-dm"
                   style="opacity:.4;pointer-events:none;padding:9px 22px;">
@@ -174,38 +249,33 @@
 </div>
 {% endfor %}
 
+{% endif %}
+
 <script>
-var selections = {}; // sec -> Map(drillId -> name)
+var selections = {};
 
 function togglePicker(sec) {
   var el = document.getElementById('picker-' + sec);
   if (!el) return;
-  if (el.style.display === 'none') {
-    el.style.display = 'block';
-  } else {
-    el.style.display = 'none';
-    clearSec(sec);
-  }
+  if (el.style.display === 'none') { el.style.display = 'block'; }
+  else { el.style.display = 'none'; clearSec(sec); }
 }
 
 function toggleCard(sec, drillId, drillName, alreadyAdded) {
   if (!selections[sec]) selections[sec] = new Map();
   var card  = document.getElementById('card-'  + sec + '-' + drillId);
   var check = document.getElementById('check-' + sec + '-' + drillId);
-
   if (selections[sec].has(drillId)) {
-    // 選択解除
     selections[sec].delete(drillId);
     var row = document.getElementById('sel-row-' + sec + '-' + drillId);
     if (row) row.remove();
-    card.style.borderColor  = alreadyAdded ? '#a7f3d0' : 'rgba(0,0,0,.08)';
-    check.style.background  = alreadyAdded ? '#059669' : 'rgba(0,0,0,.18)';
+    card.style.borderColor = alreadyAdded ? '#a7f3d0' : 'rgba(0,0,0,.08)';
+    check.style.background = alreadyAdded ? '#059669' : 'rgba(0,0,0,.18)';
   } else {
-    // 選択
     selections[sec].set(drillId, drillName);
     appendRow(sec, drillId, drillName);
-    card.style.borderColor  = '#2563eb';
-    check.style.background  = '#2563eb';
+    card.style.borderColor = '#2563eb';
+    check.style.background = '#2563eb';
   }
   refreshUI(sec);
 }
@@ -213,45 +283,30 @@ function toggleCard(sec, drillId, drillName, alreadyAdded) {
 function appendRow(sec, drillId, drillName) {
   var list = document.getElementById('sel-list-' + sec);
   if (!list) return;
-
   var row = document.createElement('div');
   row.id = 'sel-row-' + sec + '-' + drillId;
-  row.style.cssText = [
-    'display:flex', 'align-items:center', 'gap:8px',
-    'background:#F9FAFB', 'border-radius:8px', 'padding:10px 12px',
-    'margin-bottom:7px', 'border:1px solid rgba(0,0,0,.07)'
-  ].join(';');
-
+  row.style.cssText = 'display:flex;align-items:center;gap:8px;background:#F9FAFB;border-radius:8px;padding:10px 12px;margin-bottom:7px;border:1px solid rgba(0,0,0,.07)';
   row.innerHTML =
     '<input type="hidden" name="drill_id" value="' + drillId + '">' +
-    '<div style="flex:1;font-size:.83rem;font-weight:700;min-width:0;' +
-         'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + drillName + '</div>' +
+    '<div style="flex:1;font-size:.83rem;font-weight:700;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + drillName + '</div>' +
     '<div style="display:flex;align-items:center;gap:3px;flex-shrink:0;">' +
-      '<input type="number" name="sets" value="3" min="1" max="99"' +
-             ' style="width:46px;border:1.5px solid #d1d5db;border-radius:5px;' +
-             'padding:5px 4px;font-size:.9rem;font-weight:800;text-align:center;color:#1a2744;">' +
+      '<input type="number" name="sets" value="3" min="1" max="99" style="width:46px;border:1.5px solid #d1d5db;border-radius:5px;padding:5px 4px;font-size:.9rem;font-weight:800;text-align:center;color:#1a2744;">' +
       '<span style="font-size:.68rem;color:#9CA3AF;">set</span>' +
     '</div>' +
     '<span style="color:#9CA3AF;">×</span>' +
     '<div style="display:flex;align-items:center;gap:3px;flex-shrink:0;">' +
-      '<input type="text" name="reps" value="10"' +
-             ' style="width:54px;border:1.5px solid #d1d5db;border-radius:5px;' +
-             'padding:5px 4px;font-size:.9rem;font-weight:800;text-align:center;color:#1a2744;"' +
-             ' placeholder="10回">' +
+      '<input type="text" name="reps" value="10" placeholder="10回" style="width:54px;border:1.5px solid #d1d5db;border-radius:5px;padding:5px 4px;font-size:.9rem;font-weight:800;text-align:center;color:#1a2744;">' +
       '<span style="font-size:.68rem;color:#9CA3AF;">回</span>' +
     '</div>' +
-    '<button type="button" onclick="removeRow(' + sec + ',' + drillId + ')"' +
-            ' style="background:none;border:1px solid #fca5a5;color:#dc2626;' +
-            'border-radius:5px;padding:4px 7px;font-size:.72rem;cursor:pointer;flex-shrink:0;">✕</button>';
-
+    '<button type="button" onclick="removeRow(' + sec + ',' + drillId + ')" style="background:none;border:1px solid #fca5a5;color:#dc2626;border-radius:5px;padding:4px 7px;font-size:.72rem;cursor:pointer;flex-shrink:0;">✕</button>';
   list.appendChild(row);
 }
 
 function removeRow(sec, drillId) {
   if (selections[sec]) selections[sec].delete(drillId);
-  var row  = document.getElementById('sel-row-'  + sec + '-' + drillId);
-  var card = document.getElementById('card-'     + sec + '-' + drillId);
-  var check= document.getElementById('check-'    + sec + '-' + drillId);
+  var row   = document.getElementById('sel-row-' + sec + '-' + drillId);
+  var card  = document.getElementById('card-'    + sec + '-' + drillId);
+  var check = document.getElementById('check-'   + sec + '-' + drillId);
   if (row)   row.remove();
   if (card)  card.style.borderColor = 'rgba(0,0,0,.08)';
   if (check) check.style.background  = 'rgba(0,0,0,.18)';
@@ -259,10 +314,10 @@ function removeRow(sec, drillId) {
 }
 
 function refreshUI(sec) {
-  var count = selections[sec] ? selections[sec].size : 0;
-  var countEl    = document.getElementById('sel-count-'     + sec);
-  var btn        = document.getElementById('add-btn-'       + sec);
-  var container  = document.getElementById('sel-container-' + sec);
+  var count     = selections[sec] ? selections[sec].size : 0;
+  var countEl   = document.getElementById('sel-count-'     + sec);
+  var btn       = document.getElementById('add-btn-'       + sec);
+  var container = document.getElementById('sel-container-' + sec);
   if (countEl)   countEl.textContent  = count;
   if (btn) {
     btn.style.opacity       = count > 0 ? '1'    : '.4';
