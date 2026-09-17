@@ -62,17 +62,14 @@
       </div>
       {% endif %}
       <div style="font-size:.72rem;color:var(--dm-muted);margin-top:auto;">
-        <i class="bi bi-people me-1"></i>{{ d.assignments | selectattr('is_active','equalto',true) | list | length }}名に割り当て中
-        {% if d.video_file %} · <i class="bi bi-file-play me-1"></i>動画あり{% endif %}
-        {% if d.youtube_url %} · <i class="bi bi-youtube me-1"></i>YouTube{% endif %}
+        {% if d.video_file %}<i class="bi bi-file-play me-1"></i>動画あり{% endif %}
+        {% if d.youtube_url %}{% if d.video_file %} · {% endif %}<i class="bi bi-youtube me-1"></i>YouTube{% endif %}
+        {% if not d.video_file and not d.youtube_url %}動画なし{% endif %}
       </div>
     </div>
     <div style="padding:10px 16px;border-top:1px solid var(--dm-border);display:flex;gap:6px;flex-wrap:wrap;">
-      <a href="{{ url_for('bulk_assign', did=d.id) }}" class="btn-dm btn-sm-dm" style="flex:1;justify-content:center;font-size:.73rem;">
-        <i class="bi bi-people"></i> 一括割り当て
-      </a>
-      <a href="{{ url_for('edit_drill', did=d.id) }}" class="btn-dm-outline btn-sm-dm" style="justify-content:center;">
-        <i class="bi bi-pencil"></i>
+      <a href="{{ url_for('edit_drill', did=d.id) }}" class="btn-dm btn-sm-dm" style="flex:1;justify-content:center;font-size:.73rem;">
+        <i class="bi bi-pencil me-1"></i> 編集
       </a>
       <form method="POST" action="{{ url_for('delete_drill', did=d.id) }}">
         <button type="submit" style="background:none;border:1px solid #fca5a5;color:#dc2626;border-radius:6px;padding:5px 10px;font-size:.75rem;cursor:pointer;font-weight:600;"

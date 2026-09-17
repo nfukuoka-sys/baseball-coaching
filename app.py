@@ -670,10 +670,7 @@ def player_detail(player_id):
     inbody_list  = InBodyData.query.filter_by(player_id=player_id).order_by(InBodyData.date.desc()).limit(20).all()
     rapsodo_list = RapsodoData.query.filter_by(player_id=player_id).order_by(RapsodoData.date.desc()).limit(30).all()
     vald_list    = VALDData.query.filter_by(player_id=player_id).order_by(VALDData.date.desc()).limit(20).all()
-    assignments  = Assignment.query.filter_by(player_id=player_id, is_active=True).all()
     issues       = Issue.query.filter_by(player_id=player_id, is_resolved=False).all()
-    all_drills   = Drill.query.order_by(Drill.category, Drill.title).all()
-    assigned_ids = {a.drill_id for a in assignments}
     today_str    = date.today().isoformat()
 
     active_invite   = InviteToken.query.filter_by(player_id=player_id, used=False).filter(
@@ -689,8 +686,7 @@ def player_detail(player_id):
                            player=player,
                            physical_list=physical_list, inbody_list=inbody_list,
                            rapsodo_list=rapsodo_list, vald_list=vald_list,
-                           assignments=assignments, issues=issues,
-                           all_drills=all_drills, assigned_ids=assigned_ids,
+                           issues=issues,
                            today_str=today_str, pitch_types=PITCH_TYPES,
                            vald_tests=VALD_TESTS, active_invite=active_invite,
                            feedbacks=feedbacks, player_videos=player_videos,
@@ -872,34 +868,6 @@ def resolve_issue(pid, iid):
     return redirect(url_for('player_detail', player_id=pid) + '#issues')
 
 
-# ── Drill assignment ──
-
-@app.route('/coach/players/<int:pid>/assign', methods=['POST'])
-@login_required
-@coach_required
-def assign_drill(pid):
-    did = int(request.form.get('drill_id'))
-    if Assignment.query.filter_by(drill_id=did, player_id=pid, is_active=True).first():
-        flash('すでに割り当て済みです', 'error')
-    else:
-        db.session.add(Assignment(drill_id=did, player_id=pid,
-                                  coach_note=request.form.get('coach_note', '')))
-        db.session.commit()
-        flash('ドリルを割り当てました', 'success')
-    return redirect(url_for('player_detail', player_id=pid) + '#drills')
-
-
-@app.route('/coach/players/<int:pid>/unassign/<int:aid>', methods=['POST'])
-@login_required
-@coach_required
-def unassign_drill(pid, aid):
-    a = Assignment.query.get_or_404(aid)
-    a.is_active = False
-    db.session.commit()
-    flash('割り当てを解除しました', 'success')
-    return redirect(url_for('player_detail', player_id=pid) + '#drills')
-
-
 # ─── Coach: Training Programs ────────────────────────────────────────────────
 
 @app.route('/coach/players/<int:pid>/programs/new', methods=['POST'])
@@ -1075,7 +1043,6 @@ def edit_drill(did):
 @coach_required
 def delete_drill(did):
     drill = Drill.query.get_or_404(did)
-    Assignment.query.filter_by(drill_id=did).delete()
     db.session.delete(drill)
     db.session.commit()
     flash('ドリルを削除しました', 'success')
@@ -1089,7 +1056,6 @@ def delete_drill(did):
 def player_dashboard():
     if current_user.role == 'coach':
         return redirect(url_for('coach_dashboard'))
-    assignments   = Assignment.query.filter_by(player_id=current_user.id, is_active=True).all()
     latest_inbody = InBodyData.query.filter_by(player_id=current_user.id).order_by(InBodyData.date.desc()).first()
     latest_phys   = PhysicalData.query.filter_by(player_id=current_user.id).order_by(PhysicalData.date.desc()).first()
     issues        = Issue.query.filter_by(player_id=current_user.id, is_resolved=False).all()
@@ -1099,7 +1065,6 @@ def player_dashboard():
     best_velocity = db.session.query(db.func.max(RapsodoData.velocity_kmh))\
                               .filter_by(player_id=current_user.id).scalar()
     return render_template('player/dashboard.html',
-                           assignments=assignments,
                            latest_inbody=latest_inbody,
                            latest_phys=latest_phys,
                            issues=issues,
@@ -1107,15 +1072,6 @@ def player_dashboard():
                            unread_count=unread_count,
                            best_velocity=best_velocity)
 
-
-@app.route('/player/drills/<int:aid>')
-@login_required
-def player_drill_detail(aid):
-    a = Assignment.query.get_or_404(aid)
-    if a.player_id != current_user.id and current_user.role != 'coach':
-        return redirect(url_for('index'))
-    return render_template('player/drill_detail.html', assignment=a,
-                           embed_url=youtube_embed(a.drill.youtube_url))
 
 
 @app.route('/player/programs')
@@ -1200,27 +1156,6 @@ def coach_player_videos(pid):
                               .order_by(PlayerVideo.uploaded_at.desc()).all()
     return render_template('coach/player_videos.html', player=player, videos=videos)
 
-
-@app.route('/coach/drills/<int:did>/bulk-assign', methods=['GET', 'POST'])
-@login_required
-@coach_required
-def bulk_assign(did):
-    drill   = Drill.query.get_or_404(did)
-    players = User.query.filter_by(role='player', status='active').order_by(User.name).all()
-    if request.method == 'POST':
-        player_ids = request.form.getlist('player_ids')
-        coach_note = request.form.get('coach_note', '').strip()
-        count = 0
-        for pid in player_ids:
-            pid = int(pid)
-            if not Assignment.query.filter_by(drill_id=did, player_id=pid, is_active=True).first():
-                db.session.add(Assignment(drill_id=did, player_id=pid, coach_note=coach_note))
-                count += 1
-        db.session.commit()
-        flash(f'{count}人の選手にドリルを割り当てました', 'success')
-        return redirect(url_for('coach_drills'))
-    already = {a.player_id for a in Assignment.query.filter_by(drill_id=did, is_active=True).all()}
-    return render_template('coach/bulk_assign.html', drill=drill, players=players, already=already)
 
 
 @app.route('/coach/players/<int:pid>/feedback', methods=['POST'])

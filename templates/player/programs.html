@@ -19,7 +19,6 @@
   {% for d in days %}
   {% set idx = loop.index0 %}
   {% set is_today = (idx == today_dow) %}
-  {% set is_active_tab = (selected_day | default(today_dow | string) == idx | string) %}
   <button onclick="showDay({{ idx }})" id="tab-{{ idx }}"
           style="flex-shrink:0;padding:7px 16px;border-radius:20px;font-size:.82rem;font-weight:700;
                  cursor:pointer;border:none;transition:.15s;
@@ -45,24 +44,11 @@
 
   {% for d in days %}
   {% set didx = loop.index0 %}
-  {% set day_cat_items = namespace(total=0) %}
-  {% for cat in cat_order %}
-    {% set ci = prog.items | selectattr('drill.category','equalto',cat) | selectattr('day_of_week','equalto',didx) | list %}
-    {% set day_cat_items.total = day_cat_items.total + ci|length %}
-  {% endfor %}
-
-  <div class="day-pane" data-day="{{ didx }}"
-       style="display:none;padding:0 20px 18px;">
-    {% if day_cat_items.total == 0 %}
-    <div style="padding:20px 0;text-align:center;color:var(--dm-muted);font-size:.8rem;">
-      <i class="bi bi-calendar-x" style="font-size:1.3rem;display:block;margin-bottom:6px;opacity:.3;"></i>
-      {{ d }}曜日のメニューはありません
-    </div>
-    {% else %}
+  <div class="day-pane" data-day="{{ didx }}" style="display:none;padding:0 20px 18px;">
+    {% set day_has_items = namespace(v=false) %}
     {% for cat in cat_order %}
-    {% set cat_items = prog.items | selectattr('drill.category','equalto',cat)
-                                  | selectattr('day_of_week','equalto',didx) | list %}
-    {% if cat_items %}
+    {% set cat_items = prog.items | selectattr('drill.category','equalto',cat) | selectattr('day_of_week','equalto',didx) | list %}
+    {% if cat_items %}{% set day_has_items.v = true %}
     <div style="margin-bottom:16px;">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding-bottom:6px;
                   border-bottom:2px solid rgba(0,0,0,.06);">
@@ -70,9 +56,21 @@
         <span style="font-size:.72rem;color:var(--dm-muted);">{{ cat_items|length }}種目</span>
       </div>
       {% for item in cat_items %}
-      <div style="display:flex;align-items:center;gap:12px;background:var(--dm-light);
+      {# ドリルの動画情報をdata属性に埋め込む #}
+      {% set has_video = item.drill.video_file or item.drill.youtube_url %}
+      <div onclick="{% if has_video %}openDrillModal(this){% endif %}"
+           data-title="{{ item.drill.title }}"
+           data-category="{{ item.drill.category }}"
+           data-sets="{{ item.sets }}"
+           data-reps="{{ item.reps }}"
+           data-description="{{ (item.drill.description or '') | replace('"', '&quot;') }}"
+           data-notes="{{ (item.drill.notes or '') | replace('"', '&quot;') }}"
+           {% if item.drill.video_file %}data-video="{{ url_for('uploaded_file', filename=item.drill.video_file) }}"{% endif %}
+           {% if item.drill.youtube_url %}data-youtube="{{ item.drill.youtube_url }}"{% endif %}
+           style="display:flex;align-items:center;gap:12px;background:var(--dm-light);
                   border-radius:8px;padding:12px 14px;margin-bottom:6px;
-                  border:1px solid rgba(0,0,0,.04);">
+                  border:1px solid rgba(0,0,0,.04);
+                  {% if has_video %}cursor:pointer;{% endif %}">
         {% if item.drill.image_file %}
         <img src="{{ url_for('uploaded_file', filename=item.drill.image_file) }}"
              style="width:48px;height:36px;object-fit:cover;border-radius:5px;flex-shrink:0;">
@@ -87,6 +85,11 @@
           {% if item.note %}
           <div style="font-size:.72rem;color:var(--dm-blue);margin-top:2px;">{{ item.note }}</div>
           {% endif %}
+          {% if has_video %}
+          <div style="font-size:.65rem;color:#d97706;font-weight:700;margin-top:2px;">
+            <i class="bi bi-play-fill me-1"></i>動画あり
+          </div>
+          {% endif %}
         </div>
         <div style="flex-shrink:0;text-align:right;">
           <div style="font-size:1rem;font-weight:900;color:var(--dm-navy);line-height:1.1;">
@@ -96,11 +99,19 @@
             {{ item.reps }}<span style="font-size:.65rem;font-weight:600;color:var(--dm-muted);">回</span>
           </div>
         </div>
+        {% if has_video %}
+        <i class="bi bi-chevron-right" style="color:var(--dm-muted);font-size:.8rem;flex-shrink:0;"></i>
+        {% endif %}
       </div>
       {% endfor %}
     </div>
     {% endif %}
     {% endfor %}
+    {% if not day_has_items.v %}
+    <div style="padding:20px 0;text-align:center;color:var(--dm-muted);font-size:.8rem;">
+      <i class="bi bi-calendar-x" style="font-size:1.3rem;display:block;margin-bottom:6px;opacity:.3;"></i>
+      {{ d }}曜日のメニューはありません
+    </div>
     {% endif %}
   </div>
   {% endfor %}
@@ -116,28 +127,134 @@
 </div>
 {% endif %}
 
+<!-- ── 動画モーダル ── -->
+<div id="drill-modal"
+     style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.75);
+            overflow-y:auto;-webkit-overflow-scrolling:touch;"
+     onclick="if(event.target===this)closeDrillModal()">
+  <div style="min-height:100%;display:flex;align-items:flex-start;justify-content:center;padding:16px;">
+    <div style="background:var(--dm-card);border-radius:16px;width:100%;max-width:540px;
+                overflow:hidden;margin:auto;position:relative;">
+
+      <!-- ヘッダー -->
+      <div style="padding:16px 18px 12px;border-bottom:1px solid var(--dm-border);
+                  display:flex;align-items:center;gap:10px;">
+        <span id="modal-cat-badge" class="cat-badge" style="font-size:.72rem;padding:3px 10px;"></span>
+        <div id="modal-title" style="flex:1;font-weight:800;font-size:.95rem;color:var(--dm-navy);"></div>
+        <button onclick="closeDrillModal()"
+                style="background:none;border:none;font-size:1.2rem;color:var(--dm-muted);
+                       cursor:pointer;padding:4px;line-height:1;flex-shrink:0;">✕</button>
+      </div>
+
+      <!-- 動画エリア -->
+      <div id="modal-video-area"></div>
+
+      <!-- set × reps -->
+      <div id="modal-sets-reps"
+           style="display:flex;align-items:center;justify-content:center;gap:12px;
+                  padding:14px 18px;border-top:1px solid var(--dm-border);border-bottom:1px solid var(--dm-border);">
+      </div>
+
+      <!-- 説明 -->
+      <div id="modal-desc" style="padding:14px 18px;font-size:.82rem;color:var(--dm-muted);line-height:1.7;"></div>
+
+    </div>
+  </div>
+</div>
+
 <script>
 var TODAY = {{ today_dow }};
 
 function showDay(idx) {
-  // タブのスタイル切り替え
   for (var i = 0; i < 7; i++) {
     var tab = document.getElementById('tab-' + i);
     if (!tab) continue;
     if (i === idx) {
       tab.style.background = 'var(--dm-navy)';
       tab.style.color = '#fff';
+      tab.style.border = 'none';
     } else {
       tab.style.background = 'var(--dm-light)';
       tab.style.color = 'var(--dm-muted)';
       tab.style.border = '1px solid var(--dm-border)';
     }
   }
-  // ペインの表示切り替え
-  var panes = document.querySelectorAll('.day-pane');
-  panes.forEach(function(p) {
+  document.querySelectorAll('.day-pane').forEach(function(p) {
     p.style.display = parseInt(p.dataset.day) === idx ? 'block' : 'none';
   });
+}
+
+function openDrillModal(el) {
+  var title    = el.dataset.title || '';
+  var cat      = el.dataset.category || '';
+  var sets     = el.dataset.sets || '';
+  var reps     = el.dataset.reps || '';
+  var desc     = el.dataset.description || '';
+  var notes    = el.dataset.notes || '';
+  var videoSrc = el.dataset.video || '';
+  var youtubeUrl = el.dataset.youtube || '';
+
+  document.getElementById('modal-title').textContent = title;
+
+  var badge = document.getElementById('modal-cat-badge');
+  badge.textContent = cat;
+  badge.className = 'cat-badge cat-' + cat;
+
+  // set × reps
+  var srEl = document.getElementById('modal-sets-reps');
+  srEl.innerHTML =
+    '<div style="text-align:center;">' +
+      '<div style="font-size:1.6rem;font-weight:900;color:var(--dm-navy);line-height:1;">' + sets + '</div>' +
+      '<div style="font-size:.65rem;color:var(--dm-muted);margin-top:2px;">セット</div>' +
+    '</div>' +
+    '<div style="font-size:1.2rem;color:var(--dm-muted);">×</div>' +
+    '<div style="text-align:center;">' +
+      '<div style="font-size:1.6rem;font-weight:900;color:var(--dm-blue);line-height:1;">' + reps + '</div>' +
+      '<div style="font-size:.65rem;color:var(--dm-muted);margin-top:2px;">回 / 秒</div>' +
+    '</div>';
+
+  // 動画
+  var videoEl = document.getElementById('modal-video-area');
+  if (videoSrc) {
+    videoEl.innerHTML =
+      '<video controls playsinline style="width:100%;display:block;background:#000;max-height:280px;">' +
+        '<source src="' + videoSrc + '" type="video/mp4">' +
+      '</video>';
+  } else if (youtubeUrl) {
+    var vid = youtubeUrl.match(/(?:v=|youtu\.be\/|embed\/)([A-Za-z0-9_-]{11})/);
+    if (vid) {
+      videoEl.innerHTML =
+        '<div style="position:relative;padding-bottom:56.25%;height:0;">' +
+          '<iframe src="https://www.youtube.com/embed/' + vid[1] + '?playsinline=1"' +
+                  ' style="position:absolute;top:0;left:0;width:100%;height:100%;"' +
+                  ' frameborder="0" allowfullscreen></iframe>' +
+        '</div>';
+    } else {
+      videoEl.innerHTML = '';
+    }
+  } else {
+    videoEl.innerHTML = '';
+  }
+
+  // 説明
+  var descEl = document.getElementById('modal-desc');
+  var descText = [desc, notes].filter(Boolean).join('\n\n');
+  descEl.textContent = descText;
+  descEl.style.display = descText ? 'block' : 'none';
+
+  document.getElementById('drill-modal').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeDrillModal() {
+  document.getElementById('drill-modal').style.display = 'none';
+  document.body.style.overflow = '';
+  // 動画停止
+  var video = document.querySelector('#modal-video-area video');
+  if (video) video.pause();
+  // YouTube停止のためiframeを再生成
+  var iframe = document.querySelector('#modal-video-area iframe');
+  if (iframe) { var src = iframe.src; iframe.src = ''; iframe.src = src; }
 }
 
 // 初期表示：今日の曜日

@@ -69,14 +69,12 @@
         <th>ポジション</th>
         <th style="display:none;" class="d-sm-table-cell">チーム</th>
         <th>課題</th>
-        <th>ドリル</th>
         <th></th>
       </tr>
     </thead>
     <tbody>
       {% for p in players %}
       {% set active_issues = p.issues | selectattr('is_resolved','equalto',false) | list %}
-      {% set active_assigns = p.assignments | selectattr('is_active','equalto',true) | list %}
       <tr style="cursor:pointer;" onclick="location.href='{{ url_for('player_detail', player_id=p.id) }}'">
         <td>
           <div style="display:flex;align-items:center;gap:10px;">
@@ -98,7 +96,6 @@
           <span style="background:#d1fae5;color:#065f46;font-size:.7rem;padding:2px 8px;border-radius:10px;font-weight:600;">なし</span>
           {% endif %}
         </td>
-        <td style="font-size:.8rem;color:var(--dm-muted);">{{ active_assigns|length }}件</td>
         <td style="text-align:right;">
           <i class="bi bi-chevron-right" style="color:var(--dm-muted);font-size:.8rem;"></i>
         </td>

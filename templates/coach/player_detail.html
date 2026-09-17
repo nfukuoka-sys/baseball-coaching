@@ -100,7 +100,6 @@
     <div class="dm-tab" data-tab="inbody">InBody</div>
     <div class="dm-tab" data-tab="rapsodo">球速</div>
     <div class="dm-tab" data-tab="vald">VALD</div>
-    <div class="dm-tab" data-tab="drills">ドリル</div>
     <div class="dm-tab" data-tab="programs">プログラム{% if programs %} <span style="background:#7c3aed;color:#fff;font-size:.65rem;padding:1px 5px;border-radius:8px;margin-left:3px;">{{ programs|length }}</span>{% endif %}</div>
     <div class="dm-tab" data-tab="issues">課題{% if issues %} <span style="background:#ef4444;color:#fff;font-size:.65rem;padding:1px 5px;border-radius:8px;margin-left:3px;">{{ issues|length }}</span>{% endif %}</div>
     <div class="dm-tab" data-tab="feedback">フィードバック{% if feedbacks %} <span style="background:#2563eb;color:#fff;font-size:.65rem;padding:1px 5px;border-radius:8px;margin-left:3px;">{{ feedbacks|length }}</span>{% endif %}</div>
@@ -473,58 +472,6 @@
     {% else %}
     <div style="text-align:center;padding:32px;color:var(--dm-muted);font-size:.83rem;">
       <i class="bi bi-activity" style="font-size:2rem;display:block;margin-bottom:8px;opacity:.3;"></i>VALDデータなし
-    </div>
-    {% endif %}
-  </div>
-
-  <!-- ── DRILLS ── -->
-  <div id="drills" class="dm-tab-pane" style="padding:20px;">
-    <div style="display:flex;justify-content:flex-end;margin-bottom:14px;">
-      <button class="btn-dm-outline btn-sm-dm collapse-toggle" data-target="assign-form">
-        <i class="bi bi-plus"></i> ドリルを割り当て
-      </button>
-    </div>
-    <div id="assign-form" style="display:none;background:var(--dm-light);border-radius:8px;padding:16px;margin-bottom:16px;">
-      <form method="POST" action="{{ url_for('assign_drill', pid=player.id) }}">
-        <div style="display:grid;gap:10px;margin-bottom:10px;">
-          <div>
-            <label class="dm-form-label">ドリルを選択</label>
-            <select name="drill_id" class="dm-input" required>
-              <option value="">選択してください</option>
-              {% for d in all_drills %}
-              <option value="{{ d.id }}" {% if d.id in assigned_ids %}disabled{% endif %}>
-                [{{ d.category }}] {{ d.title }}{% if d.id in assigned_ids %} ✓割当済{% endif %}
-              </option>
-              {% endfor %}
-            </select>
-          </div>
-          <div>
-            <label class="dm-form-label">コーチメモ（任意）</label>
-            <input type="text" name="coach_note" class="dm-input" placeholder="この選手への注意点など">
-          </div>
-        </div>
-        <button type="submit" class="btn-dm btn-sm-dm"><i class="bi bi-check2"></i> 割り当てる</button>
-      </form>
-    </div>
-    {% if assignments %}
-    <div style="display:flex;flex-direction:column;gap:8px;">
-      {% for a in assignments %}
-      <div style="display:flex;align-items:center;gap:12px;background:var(--dm-light);border-radius:8px;padding:12px 14px;">
-        <span class="cat-badge cat-{{ a.drill.category }}">{{ a.drill.category }}</span>
-        <div style="flex:1;min-width:0;">
-          <div style="font-weight:700;font-size:.85rem;">{{ a.drill.title }}</div>
-          {% if a.coach_note %}<div style="font-size:.75rem;color:var(--dm-blue);margin-top:2px;">{{ a.coach_note }}</div>{% endif %}
-        </div>
-        <form method="POST" action="{{ url_for('unassign_drill', pid=player.id, aid=a.id) }}" style="flex-shrink:0;">
-          <button type="submit" style="background:none;border:1px solid #fca5a5;color:#dc2626;border-radius:4px;padding:3px 8px;font-size:.72rem;cursor:pointer;"
-                  onclick="return confirm('割り当てを解除しますか？')">解除</button>
-        </form>
-      </div>
-      {% endfor %}
-    </div>
-    {% else %}
-    <div style="text-align:center;padding:32px;color:var(--dm-muted);font-size:.83rem;">
-      <i class="bi bi-journal-x" style="font-size:2rem;display:block;margin-bottom:8px;opacity:.3;"></i>ドリル未割り当て
     </div>
     {% endif %}
   </div>
