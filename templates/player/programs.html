@@ -65,14 +65,14 @@
            data-reps="{{ item.reps }}"
            data-description="{{ (item.drill.description or '') | replace('"', '&quot;') }}"
            data-notes="{{ (item.drill.notes or '') | replace('"', '&quot;') }}"
-           {% if item.drill.video_file %}data-video="{{ url_for('uploaded_file', filename=item.drill.video_file) }}"{% endif %}
+           {% if item.drill.video_file %}data-video="{{ url_for('uploaded_file', filepath=item.drill.video_file) }}"{% endif %}
            {% if item.drill.youtube_url %}data-youtube="{{ item.drill.youtube_url }}"{% endif %}
            style="display:flex;align-items:center;gap:12px;background:var(--dm-light);
                   border-radius:8px;padding:12px 14px;margin-bottom:6px;
                   border:1px solid rgba(0,0,0,.04);
                   {% if has_video %}cursor:pointer;{% endif %}">
         {% if item.drill.image_file %}
-        <img src="{{ url_for('uploaded_file', filename=item.drill.image_file) }}"
+        <img src="{{ url_for('uploaded_file', filepath=item.drill.image_file) }}"
              style="width:48px;height:36px;object-fit:cover;border-radius:5px;flex-shrink:0;">
         {% else %}
         <div style="width:48px;height:36px;background:rgba(0,0,0,.08);border-radius:5px;
