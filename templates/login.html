@@ -386,9 +386,9 @@
   }
 
   function drawCoach(ctx, W, H) {
-    var x = W * .27;
-    var y = H * .72;
-    var sc = H * .0032;
+    var x = W * .22;
+    var y = H * .78;
+    var sc = H * .0038;
 
     ctx.save();
     ctx.translate(x, y);
@@ -467,14 +467,14 @@
   }
 
   function drawPlayer(ctx, W, H) {
-    var x = W * .72;
-    var y = H * .78;
-    var sc = H * .0034;
+    var x = W * .78;
+    var y = H * .82;
+    var sc = H * .0042;
 
     ctx.save();
     ctx.translate(x, y);
     ctx.scale(sc, sc);
-    ctx.fillStyle = 'rgba(30,50,100,.55)';
+    ctx.fillStyle = 'rgba(40,65,140,.62)';
 
     /* 胴体 */
     ctx.beginPath();
@@ -502,7 +502,7 @@
     ctx.fill();
 
     /* 両腕（バットスイング） */
-    ctx.fillStyle = 'rgba(35,55,110,.55)';
+    ctx.fillStyle = 'rgba(45,70,150,.62)';
     /* 後ろ腕 */
     ctx.beginPath();
     ctx.moveTo(18, -20);
@@ -531,7 +531,7 @@
     ctx.restore();
 
     /* 脚 */
-    ctx.fillStyle = 'rgba(30,50,100,.55)';
+    ctx.fillStyle = 'rgba(40,65,140,.62)';
     ctx.save();
     ctx.rotate(.12);
     ctx.beginPath();
