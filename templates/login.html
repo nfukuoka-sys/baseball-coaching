@@ -8,317 +8,252 @@
   <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;600;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    html, body {
-      height: 100%;
-      overflow: hidden;
-      background: #040a14;
-      font-family: 'Noto Sans JP', 'Helvetica Neue', Arial, sans-serif;
-    }
+    html, body { height: 100%; overflow: hidden; background: #040a14;
+      font-family: 'Noto Sans JP', 'Helvetica Neue', Arial, sans-serif; }
 
     /* ── 背景レイヤー ── */
-    .bg {
-      position: fixed;
-      inset: 0;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-    }
-
     .bg-half {
-      position: relative;
+      position: fixed;
+      top: 0; bottom: 0;
       overflow: hidden;
+      transition: left .65s cubic-bezier(.77,0,.18,1),
+                  width .65s cubic-bezier(.77,0,.18,1),
+                  opacity .5s ease;
+      will-change: left, width, opacity;
     }
+    .bg-coach { left: 0; width: 50%; }
+    .bg-player { left: 50%; width: 50%; }
 
     .bg-half img {
       position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
       object-fit: cover;
       object-position: center top;
+      transition: transform .65s cubic-bezier(.77,0,.18,1);
     }
 
-    /* 中央のソフトな境界 */
+    /* 各ハーフの内側フェード */
     .bg-coach::after {
       content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(to right,
-        rgba(4,10,20,0) 50%,
-        rgba(4,10,20,.6) 80%,
-        rgba(4,10,20,.85) 100%);
+      position: absolute; inset: 0;
+      background: linear-gradient(to right, rgba(4,10,20,0) 50%, rgba(4,10,20,.7) 100%);
+      transition: opacity .5s ease;
     }
     .bg-player::after {
       content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(to left,
-        rgba(4,10,20,0) 50%,
-        rgba(4,10,20,.6) 80%,
-        rgba(4,10,20,.85) 100%);
+      position: absolute; inset: 0;
+      background: linear-gradient(to left, rgba(4,10,20,0) 50%, rgba(4,10,20,.7) 100%);
+      transition: opacity .5s ease;
     }
 
-    /* 上部グラデーション（ロゴ視認性） */
-    .bg::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(to bottom,
-        rgba(4,10,20,.72) 0%,
-        rgba(4,10,20,.3) 28%,
-        rgba(4,10,20,0) 50%,
-        rgba(4,10,20,.15) 65%,
-        rgba(4,10,20,.7) 85%,
-        rgba(4,10,20,.9) 100%);
-      z-index: 1;
-      pointer-events: none;
+    /* 全画面展開後は内側フェード不要 */
+    .bg-half.expanded::after { opacity: 0; }
+
+    /* 上下オーバーレイ（常時） */
+    .bg-overlay {
+      position: fixed; inset: 0; z-index: 1; pointer-events: none;
+      background:
+        linear-gradient(to bottom,
+          rgba(4,10,20,.72) 0%,
+          rgba(4,10,20,.25) 25%,
+          rgba(4,10,20,0)   48%,
+          rgba(4,10,20,.15) 65%,
+          rgba(4,10,20,.72) 85%,
+          rgba(4,10,20,.92) 100%);
+      transition: opacity .5s ease;
     }
 
-    /* 中央の区切り線 */
+    /* 分割ライン */
     .bg-divider {
-      position: absolute;
-      left: 50%;
-      top: 0; bottom: 0;
-      width: 1px;
+      position: fixed; left: 50%; top: 0; bottom: 0; width: 1px; z-index: 2;
       background: linear-gradient(to bottom,
-        transparent 0%,
-        rgba(255,255,255,.08) 20%,
-        rgba(255,255,255,.18) 50%,
-        rgba(255,255,255,.08) 80%,
-        transparent 100%);
+        transparent 0%, rgba(255,255,255,.08) 20%,
+        rgba(255,255,255,.18) 50%, rgba(255,255,255,.08) 80%, transparent 100%);
       transform: translateX(-50%);
-      z-index: 2;
+      transition: opacity .4s ease;
       pointer-events: none;
     }
 
-    /* ── コンテンツ層 ── */
-    .page {
-      position: fixed;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      z-index: 10;
-      padding-top: max(env(safe-area-inset-top, 0px), 0px);
+    /* ── トップUI ── */
+    .top-ui {
+      position: fixed; inset: 0; z-index: 10;
+      display: flex; flex-direction: column; align-items: center;
+      padding-top: env(safe-area-inset-top, 0px);
       padding-bottom: env(safe-area-inset-bottom, 0px);
+      transition: opacity .35s ease;
     }
 
-    /* ── ロゴゾーン（上半分） ── */
     .logo-zone {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 0 20px;
-      gap: 0;
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; padding: 0 20px;
     }
-
-    /* b.n ロゴ */
-    .logo-mark {
-      display: flex;
-      align-items: baseline;
-      gap: 2px;
-      margin-bottom: 10px;
-      line-height: 1;
-    }
-
+    .logo-mark { display: flex; align-items: baseline; gap: 2px; margin-bottom: 10px; }
     .logo-b, .logo-n {
-      font-family: 'Georgia', 'Times New Roman', serif;
-      font-style: italic;
-      font-weight: 700;
-      font-size: clamp(64px, 20vw, 100px);
+      font-family: 'Georgia', serif; font-style: italic; font-weight: 700;
+      font-size: clamp(64px, 20vw, 100px); line-height: .95;
       color: transparent;
-      background: linear-gradient(180deg,
-        #ffffff 0%,
-        #e0e0e0 40%,
-        #b8b8b8 70%,
-        #888 100%);
-      -webkit-background-clip: text;
-      background-clip: text;
+      background: linear-gradient(180deg, #fff 0%, #e0e0e0 40%, #b8b8b8 70%, #888 100%);
+      -webkit-background-clip: text; background-clip: text;
       filter: drop-shadow(0 2px 12px rgba(0,0,0,.7));
-      line-height: .95;
     }
-
     .logo-dot {
-      font-family: 'Georgia', serif;
-      font-size: clamp(20px, 6vw, 30px);
-      color: rgba(255,255,255,.8);
-      margin: 0 1px;
-      padding-bottom: 8px;
-      align-self: flex-end;
+      font-family: 'Georgia', serif; font-size: clamp(20px, 6vw, 30px);
+      color: rgba(255,255,255,.8); padding-bottom: 8px; align-self: flex-end;
     }
-
-    .logo-slash {
-      font-family: 'Georgia', serif;
-      font-style: italic;
-      font-weight: 300;
-      font-size: clamp(52px, 16vw, 82px);
-      color: rgba(255,255,255,.45);
-      line-height: .95;
-      margin: 0 -2px;
-    }
-
     .logo-app {
-      font-family: 'Oswald', sans-serif;
-      font-weight: 600;
-      font-size: clamp(11px, 3.5vw, 16px);
-      letter-spacing: .44em;
-      color: #fff;
-      text-align: center;
-      text-transform: uppercase;
-      margin-bottom: 6px;
+      font-family: 'Oswald', sans-serif; font-weight: 600;
+      font-size: clamp(11px, 3.5vw, 16px); letter-spacing: .44em;
+      color: #fff; text-align: center; margin-bottom: 6px;
       text-shadow: 0 1px 8px rgba(0,0,0,.8);
     }
-
     .logo-tagline {
-      font-family: 'Oswald', sans-serif;
-      font-weight: 300;
-      font-size: clamp(8px, 2.4vw, 11px);
-      letter-spacing: .28em;
-      color: rgba(255,255,255,.35);
-      text-align: center;
+      font-family: 'Oswald', sans-serif; font-weight: 300;
+      font-size: clamp(8px, 2.4vw, 11px); letter-spacing: .28em;
+      color: rgba(255,255,255,.35); text-align: center;
     }
+    .spacer { flex: 1.2; }
 
-    /* ── 中央スペーサー（背景を見せる） ── */
-    .spacer {
-      flex: 1.2;
-    }
-
-    /* ── ボタンゾーン（下部） ── */
     .btn-zone {
-      width: 100%;
-      max-width: 480px;
-      padding: 0 16px 28px;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      flex-shrink: 0;
+      width: 100%; max-width: 480px; padding: 0 16px 28px;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 10px; flex-shrink: 0;
     }
-
-    /* グラスカード */
     .card {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 18px 10px 16px;
-      border-radius: 14px;
-      text-decoration: none;
-      position: relative;
-      overflow: hidden;
-      transition: transform .18s ease;
-      -webkit-tap-highlight-color: transparent;
-      cursor: pointer;
-      /* ガラス効果 */
+      display: flex; flex-direction: column; align-items: center;
+      padding: 18px 10px 16px; border-radius: 14px;
+      text-decoration: none; position: relative; overflow: hidden;
+      transition: transform .18s ease, opacity .35s ease;
+      -webkit-tap-highlight-color: transparent; cursor: pointer;
       background: rgba(8,16,34,.55);
       backdrop-filter: blur(14px) saturate(1.5);
       -webkit-backdrop-filter: blur(14px) saturate(1.5);
       border: 1px solid rgba(255,255,255,.13);
     }
-
     .card:active { transform: scale(.97); }
-
-    /* コーチカード：微細な白ボーダー */
-    .card-coach {
-      border-color: rgba(255,255,255,.13);
-    }
-
-    /* 選手カード：青い発光ボーダー */
     .card-player {
       border-color: rgba(80,150,255,.32);
-      box-shadow:
-        0 0 0 1px rgba(60,120,255,.1),
-        0 0 20px rgba(37,99,235,.2),
-        inset 0 0 20px rgba(37,99,235,.05);
+      box-shadow: 0 0 0 1px rgba(60,120,255,.1), 0 0 20px rgba(37,99,235,.2),
+                  inset 0 0 20px rgba(37,99,235,.05);
+    }
+    @media (hover:hover) {
+      .card-coach:hover { background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.22); transform: translateY(-2px); }
+      .card-player:hover { background: rgba(20,55,140,.5); border-color: rgba(80,150,255,.5); transform: translateY(-2px); }
+    }
+    .card-icon { width: 44px; height: 44px; margin-bottom: 10px; opacity: .82; }
+    .card-title-ja { font-size: clamp(20px, 5.5vw, 26px); font-weight: 700; color: #fff; letter-spacing: .05em; margin-bottom: 2px; text-shadow: 0 1px 6px rgba(0,0,0,.6); }
+    .card-title-en { font-family: 'Oswald', sans-serif; font-size: clamp(8px, 2.2vw, 10px); letter-spacing: .22em; color: rgba(255,255,255,.35); margin-bottom: 10px; }
+    .card-desc { font-size: clamp(9px, 2.4vw, 11px); color: rgba(255,255,255,.45); line-height: 1.6; text-align: center; flex: 1; }
+    .card-arrow { margin-top: 12px; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: .82rem; }
+    .card-coach .card-arrow { border: 1px solid rgba(255,255,255,.22); color: rgba(255,255,255,.5); }
+    .card-player .card-arrow { border: 1px solid rgba(80,150,255,.55); color: rgba(120,180,255,.8); }
+
+    /* ── ログインフォーム（初期：非表示） ── */
+    .login-screen {
+      position: fixed; inset: 0; z-index: 20;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: max(env(safe-area-inset-top,0px), 20px) 24px
+               max(env(safe-area-inset-bottom,0px), 28px);
+      opacity: 0; pointer-events: none;
+      transition: opacity .45s ease .25s;
+    }
+    .login-screen.visible { opacity: 1; pointer-events: auto; }
+
+    .login-inner { width: 100%; max-width: 360px; }
+
+    /* 戻るボタン */
+    .back-btn {
+      display: flex; align-items: center; gap: 6px;
+      color: rgba(255,255,255,.5); font-size: .78rem;
+      background: none; border: none; cursor: pointer;
+      padding: 0; margin-bottom: 32px;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .back-btn:hover { color: rgba(255,255,255,.8); }
+
+    /* ログインヘッダー */
+    .login-logo {
+      text-align: center; margin-bottom: 32px;
+    }
+    .login-logo-mark { display: flex; align-items: baseline; justify-content: center; gap: 1px; margin-bottom: 8px; }
+    .login-logo-b, .login-logo-n {
+      font-family: 'Georgia', serif; font-style: italic; font-weight: 700;
+      font-size: 48px; line-height: .95;
+      color: transparent;
+      background: linear-gradient(180deg, #fff 0%, #ccc 100%);
+      -webkit-background-clip: text; background-clip: text;
+      filter: drop-shadow(0 1px 6px rgba(0,0,0,.6));
+    }
+    .login-logo-dot { font-family: 'Georgia', serif; font-size: 16px; color: rgba(255,255,255,.7); padding-bottom: 5px; align-self: flex-end; }
+    .login-role-label {
+      font-family: 'Oswald', sans-serif; font-weight: 600;
+      font-size: .85rem; letter-spacing: .3em; color: rgba(255,255,255,.55);
+      text-transform: uppercase;
     }
 
-    @media (hover: hover) {
-      .card-coach:hover {
-        background: rgba(255,255,255,.1);
-        border-color: rgba(255,255,255,.22);
-        transform: translateY(-2px);
-      }
-      .card-player:hover {
-        background: rgba(20,55,140,.5);
-        border-color: rgba(80,150,255,.5);
-        transform: translateY(-2px);
-        box-shadow: 0 0 28px rgba(37,99,235,.35), inset 0 0 24px rgba(37,99,235,.08);
-      }
+    /* フォームカード */
+    .form-card {
+      background: rgba(6,14,30,.65);
+      backdrop-filter: blur(20px) saturate(1.6);
+      -webkit-backdrop-filter: blur(20px) saturate(1.6);
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,.12);
+      padding: 28px 24px 24px;
     }
+    .form-card.player-card { border-color: rgba(80,150,255,.28); }
 
-    /* アイコン */
-    .card-icon {
-      width: 44px;
-      height: 44px;
-      margin-bottom: 10px;
-      opacity: .82;
-      flex-shrink: 0;
+    .form-group { margin-bottom: 16px; }
+    .form-label {
+      display: block; font-size: .68rem; letter-spacing: .14em;
+      color: rgba(255,255,255,.4); margin-bottom: 7px; text-transform: uppercase;
     }
+    .form-input {
+      width: 100%; background: rgba(255,255,255,.07);
+      border: 1.5px solid rgba(255,255,255,.13); border-radius: 10px;
+      padding: 13px 15px; color: #fff; font-size: .9rem;
+      outline: none; transition: border-color .2s, background .2s;
+      font-family: inherit;
+    }
+    .form-input:focus {
+      border-color: rgba(255,255,255,.35); background: rgba(255,255,255,.1);
+    }
+    .form-input::placeholder { color: rgba(255,255,255,.2); }
 
-    /* タイトル */
-    .card-title-ja {
-      font-size: clamp(20px, 5.5vw, 26px);
-      font-weight: 700;
-      color: #fff;
-      letter-spacing: .05em;
-      margin-bottom: 2px;
-      text-shadow: 0 1px 6px rgba(0,0,0,.6);
-    }
+    .form-input.player-focus:focus { border-color: rgba(80,150,255,.55); }
 
-    .card-title-en {
-      font-family: 'Oswald', sans-serif;
-      font-size: clamp(8px, 2.2vw, 10px);
-      letter-spacing: .22em;
-      color: rgba(255,255,255,.35);
-      margin-bottom: 10px;
+    .btn-submit {
+      width: 100%; margin-top: 8px; padding: 14px;
+      border: none; border-radius: 10px;
+      font-size: .85rem; font-weight: 700; letter-spacing: .12em;
+      cursor: pointer; transition: opacity .2s, transform .15s;
+      color: #fff; font-family: 'Oswald', sans-serif;
     }
+    .btn-submit:active { transform: scale(.98); opacity: .85; }
+    .btn-submit-coach { background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.25); }
+    .btn-submit-coach:hover { background: rgba(255,255,255,.26); }
+    .btn-submit-player { background: rgba(37,99,235,.7); border: 1px solid rgba(80,150,255,.4); }
+    .btn-submit-player:hover { background: rgba(37,99,235,.88); }
 
-    .card-desc {
-      font-size: clamp(9px, 2.4vw, 11px);
-      color: rgba(255,255,255,.45);
-      line-height: 1.6;
-      text-align: center;
-      flex: 1;
-    }
-
-    /* 矢印 */
-    .card-arrow {
-      margin-top: 12px;
-      width: 30px;
-      height: 30px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: .82rem;
-    }
-    .card-coach .card-arrow {
-      border: 1px solid rgba(255,255,255,.22);
-      color: rgba(255,255,255,.5);
-    }
-    .card-player .card-arrow {
-      border: 1px solid rgba(80,150,255,.55);
-      color: rgba(120,180,255,.8);
+    .alert-err {
+      background: rgba(239,68,68,.15); border: 1px solid rgba(239,68,68,.3);
+      border-radius: 8px; padding: 10px 14px; color: #fca5a5;
+      font-size: .78rem; margin-bottom: 16px; display: flex; align-items: center; gap: 6px;
     }
   </style>
 </head>
 <body>
 
 <!-- 背景 -->
-<div class="bg">
-  <div class="bg-half bg-coach">
-    <img src="{{ url_for('static', filename='images/bg-coach.jpg') }}" alt="">
-  </div>
-  <div class="bg-half bg-player">
-    <img src="{{ url_for('static', filename='images/bg-player.jpg') }}" alt="">
-  </div>
-  <div class="bg-divider"></div>
+<div class="bg-coach bg-half">
+  <img src="{{ url_for('static', filename='images/bg-coach.jpg') }}" alt="">
 </div>
+<div class="bg-player bg-half">
+  <img src="{{ url_for('static', filename='images/bg-player.jpg') }}" alt="">
+</div>
+<div class="bg-overlay" id="bg-overlay"></div>
+<div class="bg-divider" id="bg-divider"></div>
 
-<!-- コンテンツ -->
-<div class="page">
-
-  <!-- ロゴ -->
+<!-- ── トップUI（ロール選択） ── -->
+<div class="top-ui" id="top-ui">
   <div class="logo-zone">
     <div class="logo-mark">
       <span class="logo-b">b</span>
@@ -328,15 +263,9 @@
     <div class="logo-app">Baseball App</div>
     <div class="logo-tagline">BETTER PLAY.&nbsp;&nbsp;&nbsp;NEXT STAGE.</div>
   </div>
-
-  <!-- 中央スペース（写真を見せる） -->
   <div class="spacer"></div>
-
-  <!-- ロール選択 -->
   <div class="btn-zone">
-
-    <a href="/login/coach" class="card card-coach">
-      <!-- コーチアイコン -->
+    <button class="card card-coach" onclick="openLogin('coach')">
       <svg class="card-icon" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
         <circle cx="22" cy="11" r="7" fill="white" opacity=".85"/>
         <path d="M8 38 C8 28 36 28 36 38" stroke="white" stroke-width="2.5" stroke-linecap="round" fill="none" opacity=".85"/>
@@ -347,27 +276,176 @@
       <div class="card-title-en">COACH</div>
       <div class="card-desc">選手の成長をサポート</div>
       <div class="card-arrow">→</div>
-    </a>
-
-    <a href="/login/player" class="card card-player">
-      <!-- 選手アイコン -->
+    </button>
+    <button class="card card-player" onclick="openLogin('player')">
       <svg class="card-icon" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
         <circle cx="18" cy="10" r="7" fill="white" opacity=".85"/>
         <path d="M4 38 C4 28 32 28 32 38" stroke="white" stroke-width="2.5" stroke-linecap="round" fill="none" opacity=".85"/>
-        <!-- バット -->
         <line x1="28" y1="16" x2="42" y2="4" stroke="white" stroke-width="2.8" stroke-linecap="round" opacity=".8"/>
-        <!-- 手 -->
         <circle cx="27" cy="17" r="2.5" fill="white" opacity=".75"/>
       </svg>
       <div class="card-title-ja">選手</div>
       <div class="card-title-en">PLAYER</div>
       <div class="card-desc">自分のデータを知り<br>さらに上へ</div>
       <div class="card-arrow">→</div>
-    </a>
-
+    </button>
   </div>
-
 </div>
+
+<!-- ── コーチ ログインフォーム ── -->
+<div class="login-screen" id="login-coach">
+  <div class="login-inner">
+    <button class="back-btn" onclick="closeLogin()">
+      ← 戻る
+    </button>
+    <div class="login-logo">
+      <div class="login-logo-mark">
+        <span class="login-logo-b">b</span>
+        <span class="login-logo-dot">.</span>
+        <span class="login-logo-n">n</span>
+      </div>
+      <div class="login-role-label">Coach Login</div>
+    </div>
+    <div class="form-card">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for cat, msg in messages %}
+          <div class="alert-err">⚠ {{ msg }}</div>
+        {% endfor %}
+      {% endwith %}
+      <form method="POST" action="/login/coach">
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" name="email" class="form-input" placeholder="your@email.com" required autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input type="password" name="password" class="form-input" placeholder="••••••••" required autocomplete="current-password">
+        </div>
+        <button type="submit" class="btn-submit btn-submit-coach">LOGIN</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ── 選手 ログインフォーム ── -->
+<div class="login-screen" id="login-player">
+  <div class="login-inner">
+    <button class="back-btn" onclick="closeLogin()">
+      ← 戻る
+    </button>
+    <div class="login-logo">
+      <div class="login-logo-mark">
+        <span class="login-logo-b">b</span>
+        <span class="login-logo-dot">.</span>
+        <span class="login-logo-n">n</span>
+      </div>
+      <div class="login-role-label">Player Login</div>
+    </div>
+    <div class="form-card player-card">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for cat, msg in messages %}
+          <div class="alert-err">⚠ {{ msg }}</div>
+        {% endfor %}
+      {% endwith %}
+      <form method="POST" action="/login/player">
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" name="email" class="form-input player-focus" placeholder="your@email.com" required autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input type="password" name="password" class="form-input player-focus" placeholder="••••••••" required autocomplete="current-password">
+        </div>
+        <button type="submit" class="btn-submit btn-submit-player">LOGIN</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+var bgCoach   = document.querySelector('.bg-coach');
+var bgPlayer  = document.querySelector('.bg-player');
+var divider   = document.getElementById('bg-divider');
+var topUi     = document.getElementById('top-ui');
+var overlay   = document.getElementById('bg-overlay');
+var currentRole = null;
+
+function openLogin(role) {
+  currentRole = role;
+
+  /* 分割ラインを消す */
+  divider.style.opacity = '0';
+
+  /* トップUIをフェードアウト */
+  topUi.style.opacity = '0';
+  topUi.style.pointerEvents = 'none';
+
+  /* 上下オーバーレイを少し強める */
+  overlay.style.background =
+    'linear-gradient(to bottom, rgba(4,10,20,.82) 0%, rgba(4,10,20,.45) 30%, rgba(4,10,20,.3) 55%, rgba(4,10,20,.82) 100%)';
+
+  if (role === 'coach') {
+    /* コーチ背景を全画面に */
+    bgCoach.style.left  = '0';
+    bgCoach.style.width = '100%';
+    bgCoach.classList.add('expanded');
+    /* 選手背景をフェードアウト */
+    bgPlayer.style.opacity = '0';
+    /* コーチ画像を少し拡大して演出 */
+    bgCoach.querySelector('img').style.transform = 'scale(1.04)';
+    /* ログインフォーム表示 */
+    setTimeout(function() {
+      document.getElementById('login-coach').classList.add('visible');
+    }, 180);
+  } else {
+    /* 選手背景を全画面に */
+    bgPlayer.style.left  = '0';
+    bgPlayer.style.width = '100%';
+    bgPlayer.classList.add('expanded');
+    /* コーチ背景をフェードアウト */
+    bgCoach.style.opacity = '0';
+    /* 選手画像を少し拡大して演出 */
+    bgPlayer.querySelector('img').style.transform = 'scale(1.04)';
+    /* ログインフォーム表示 */
+    setTimeout(function() {
+      document.getElementById('login-player').classList.add('visible');
+    }, 180);
+  }
+}
+
+function closeLogin() {
+  /* フォームを隠す */
+  document.getElementById('login-coach').classList.remove('visible');
+  document.getElementById('login-player').classList.remove('visible');
+
+  /* 背景を元に戻す */
+  bgCoach.style.left    = '0';
+  bgCoach.style.width   = '50%';
+  bgCoach.style.opacity = '1';
+  bgCoach.classList.remove('expanded');
+  bgCoach.querySelector('img').style.transform = '';
+
+  bgPlayer.style.left    = '50%';
+  bgPlayer.style.width   = '50%';
+  bgPlayer.style.opacity = '1';
+  bgPlayer.classList.remove('expanded');
+  bgPlayer.querySelector('img').style.transform = '';
+
+  /* オーバーレイを戻す */
+  overlay.style.background = '';
+
+  /* 分割ラインを戻す */
+  setTimeout(function() { divider.style.opacity = '1'; }, 350);
+
+  /* トップUIをフェードイン */
+  setTimeout(function() {
+    topUi.style.opacity = '1';
+    topUi.style.pointerEvents = 'auto';
+  }, 200);
+
+  currentRole = null;
+}
+</script>
 
 </body>
 </html>
