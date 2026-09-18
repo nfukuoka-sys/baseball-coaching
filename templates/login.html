@@ -5,553 +5,370 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>b.n BASEBALL APP</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;600;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; overflow: hidden; }
 
-    /* ── フルスクリーン背景 ── */
-    body {
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      background: #040a14;
       font-family: 'Noto Sans JP', 'Helvetica Neue', Arial, sans-serif;
-      background: #060d1a;
-      position: relative;
     }
 
-    /* キャンバス背景 */
-    #bg-canvas {
-      position: fixed; inset: 0;
-      width: 100%; height: 100%;
+    /* ── 背景レイヤー ── */
+    .bg {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .bg-half {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .bg-half img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center top;
+    }
+
+    /* 中央のソフトな境界 */
+    .bg-coach::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to right,
+        rgba(4,10,20,0) 50%,
+        rgba(4,10,20,.6) 80%,
+        rgba(4,10,20,.85) 100%);
+    }
+    .bg-player::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to left,
+        rgba(4,10,20,0) 50%,
+        rgba(4,10,20,.6) 80%,
+        rgba(4,10,20,.85) 100%);
+    }
+
+    /* 上部グラデーション（ロゴ視認性） */
+    .bg::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to bottom,
+        rgba(4,10,20,.72) 0%,
+        rgba(4,10,20,.3) 28%,
+        rgba(4,10,20,0) 50%,
+        rgba(4,10,20,.15) 65%,
+        rgba(4,10,20,.7) 85%,
+        rgba(4,10,20,.9) 100%);
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    /* 中央の区切り線 */
+    .bg-divider {
+      position: absolute;
+      left: 50%;
+      top: 0; bottom: 0;
+      width: 1px;
+      background: linear-gradient(to bottom,
+        transparent 0%,
+        rgba(255,255,255,.08) 20%,
+        rgba(255,255,255,.18) 50%,
+        rgba(255,255,255,.08) 80%,
+        transparent 100%);
+      transform: translateX(-50%);
+      z-index: 2;
+      pointer-events: none;
     }
 
     /* ── コンテンツ層 ── */
     .page {
-      position: fixed; inset: 0;
-      display: flex; flex-direction: column;
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
       align-items: center;
+      z-index: 10;
+      padding-top: max(env(safe-area-inset-top, 0px), 0px);
+      padding-bottom: env(safe-area-inset-bottom, 0px);
     }
 
-    /* ── ロゴエリア ── */
-    .logo-wrap {
+    /* ── ロゴゾーン（上半分） ── */
+    .logo-zone {
       flex: 1;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      padding-top: env(safe-area-inset-top, 0px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 0 20px;
       gap: 0;
     }
 
-    /* b.n マーク */
+    /* b.n ロゴ */
     .logo-mark {
-      display: flex; align-items: center; justify-content: center;
-      line-height: 1;
+      display: flex;
+      align-items: baseline;
+      gap: 2px;
       margin-bottom: 10px;
-      filter: drop-shadow(0 4px 24px rgba(0,0,0,.8));
-    }
-    .logo-mark svg {
-      width: 220px; height: 100px;
+      line-height: 1;
     }
 
-    .logo-app-name {
+    .logo-b, .logo-n {
+      font-family: 'Georgia', 'Times New Roman', serif;
+      font-style: italic;
+      font-weight: 700;
+      font-size: clamp(64px, 20vw, 100px);
+      color: transparent;
+      background: linear-gradient(180deg,
+        #ffffff 0%,
+        #e0e0e0 40%,
+        #b8b8b8 70%,
+        #888 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      filter: drop-shadow(0 2px 12px rgba(0,0,0,.7));
+      line-height: .95;
+    }
+
+    .logo-dot {
+      font-family: 'Georgia', serif;
+      font-size: clamp(20px, 6vw, 30px);
+      color: rgba(255,255,255,.8);
+      margin: 0 1px;
+      padding-bottom: 8px;
+      align-self: flex-end;
+    }
+
+    .logo-slash {
+      font-family: 'Georgia', serif;
+      font-style: italic;
+      font-weight: 300;
+      font-size: clamp(52px, 16vw, 82px);
+      color: rgba(255,255,255,.45);
+      line-height: .95;
+      margin: 0 -2px;
+    }
+
+    .logo-app {
       font-family: 'Oswald', sans-serif;
       font-weight: 600;
-      font-size: 1.15rem;
-      letter-spacing: .42em;
+      font-size: clamp(11px, 3.5vw, 16px);
+      letter-spacing: .44em;
       color: #fff;
       text-align: center;
-      text-shadow: 0 2px 16px rgba(0,0,0,.8);
+      text-transform: uppercase;
       margin-bottom: 6px;
+      text-shadow: 0 1px 8px rgba(0,0,0,.8);
     }
+
     .logo-tagline {
       font-family: 'Oswald', sans-serif;
       font-weight: 300;
-      font-size: .62rem;
-      letter-spacing: .3em;
-      color: rgba(255,255,255,.38);
+      font-size: clamp(8px, 2.4vw, 11px);
+      letter-spacing: .28em;
+      color: rgba(255,255,255,.35);
       text-align: center;
-      margin-bottom: 22px;
-    }
-    .catchcopy {
-      font-size: 1.35rem;
-      font-weight: 700;
-      color: #fff;
-      letter-spacing: .08em;
-      text-align: center;
-      text-shadow: 0 2px 20px rgba(0,0,0,.9);
     }
 
-    /* ── ボタンエリア ── */
-    .btn-area {
+    /* ── 中央スペーサー（背景を見せる） ── */
+    .spacer {
+      flex: 1.2;
+    }
+
+    /* ── ボタンゾーン（下部） ── */
+    .btn-zone {
       width: 100%;
-      padding: 0 16px calc(env(safe-area-inset-bottom, 0px) + 32px);
+      max-width: 480px;
+      padding: 0 16px 28px;
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 12px;
+      gap: 10px;
       flex-shrink: 0;
     }
 
-    .btn-role {
-      display: flex; flex-direction: column; align-items: center;
-      padding: 20px 12px 16px;
-      border-radius: 16px;
+    /* グラスカード */
+    .card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 18px 10px 16px;
+      border-radius: 14px;
       text-decoration: none;
       position: relative;
       overflow: hidden;
-      transition: transform .18s;
+      transition: transform .18s ease;
       -webkit-tap-highlight-color: transparent;
-      min-height: 180px;
+      cursor: pointer;
+      /* ガラス効果 */
+      background: rgba(8,16,34,.55);
+      backdrop-filter: blur(14px) saturate(1.5);
+      -webkit-backdrop-filter: blur(14px) saturate(1.5);
+      border: 1px solid rgba(255,255,255,.13);
     }
-    .btn-role:active { transform: scale(.96); }
 
-    .btn-coach {
-      background: rgba(255,255,255,.07);
-      border: 1.5px solid rgba(255,255,255,.16);
-      backdrop-filter: blur(6px);
+    .card:active { transform: scale(.97); }
+
+    /* コーチカード：微細な白ボーダー */
+    .card-coach {
+      border-color: rgba(255,255,255,.13);
     }
-    .btn-player {
-      background: rgba(10,40,110,.35);
-      border: 1.5px solid rgba(80,140,255,.45);
-      backdrop-filter: blur(6px);
+
+    /* 選手カード：青い発光ボーダー */
+    .card-player {
+      border-color: rgba(80,150,255,.32);
       box-shadow:
-        0 0 0 1px rgba(80,140,255,.15),
-        0 0 24px rgba(37,99,235,.3),
-        inset 0 0 24px rgba(37,99,235,.08);
+        0 0 0 1px rgba(60,120,255,.1),
+        0 0 20px rgba(37,99,235,.2),
+        inset 0 0 20px rgba(37,99,235,.05);
+    }
+
+    @media (hover: hover) {
+      .card-coach:hover {
+        background: rgba(255,255,255,.1);
+        border-color: rgba(255,255,255,.22);
+        transform: translateY(-2px);
+      }
+      .card-player:hover {
+        background: rgba(20,55,140,.5);
+        border-color: rgba(80,150,255,.5);
+        transform: translateY(-2px);
+        box-shadow: 0 0 28px rgba(37,99,235,.35), inset 0 0 24px rgba(37,99,235,.08);
+      }
     }
 
     /* アイコン */
-    .role-icon {
-      width: 54px; height: 54px;
-      margin-bottom: 12px;
+    .card-icon {
+      width: 44px;
+      height: 44px;
+      margin-bottom: 10px;
       opacity: .82;
+      flex-shrink: 0;
     }
 
     /* タイトル */
-    .role-title {
-      font-size: 1.6rem;
+    .card-title-ja {
+      font-size: clamp(20px, 5.5vw, 26px);
       font-weight: 700;
       color: #fff;
-      letter-spacing: .06em;
-      margin-bottom: 8px;
-      text-shadow: 0 1px 8px rgba(0,0,0,.6);
+      letter-spacing: .05em;
+      margin-bottom: 2px;
+      text-shadow: 0 1px 6px rgba(0,0,0,.6);
     }
 
-    /* 説明 */
-    .role-desc {
-      font-size: .67rem;
-      color: rgba(255,255,255,.5);
-      line-height: 1.65;
+    .card-title-en {
+      font-family: 'Oswald', sans-serif;
+      font-size: clamp(8px, 2.2vw, 10px);
+      letter-spacing: .22em;
+      color: rgba(255,255,255,.35);
+      margin-bottom: 10px;
+    }
+
+    .card-desc {
+      font-size: clamp(9px, 2.4vw, 11px);
+      color: rgba(255,255,255,.45);
+      line-height: 1.6;
       text-align: center;
       flex: 1;
     }
 
-    /* 矢印ボタン */
-    .role-arrow {
-      margin-top: 14px;
-      width: 34px; height: 34px;
+    /* 矢印 */
+    .card-arrow {
+      margin-top: 12px;
+      width: 30px;
+      height: 30px;
       border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: .85rem; font-weight: 700;
-      color: rgba(255,255,255,.55);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: .82rem;
     }
-    .btn-coach .role-arrow {
-      border: 1.5px solid rgba(255,255,255,.25);
+    .card-coach .card-arrow {
+      border: 1px solid rgba(255,255,255,.22);
+      color: rgba(255,255,255,.5);
     }
-    .btn-player .role-arrow {
-      border: 1.5px solid rgba(100,160,255,.65);
-      color: rgba(120,170,255,.9);
-    }
-
-    @media (hover: hover) {
-      .btn-coach:hover  { background: rgba(255,255,255,.12); transform: translateY(-2px); }
-      .btn-player:hover { background: rgba(10,40,110,.5); transform: translateY(-2px); }
+    .card-player .card-arrow {
+      border: 1px solid rgba(80,150,255,.55);
+      color: rgba(120,180,255,.8);
     }
   </style>
 </head>
 <body>
 
-<!-- 背景キャンバス -->
-<canvas id="bg-canvas"></canvas>
+<!-- 背景 -->
+<div class="bg">
+  <div class="bg-half bg-coach">
+    <img src="{{ url_for('static', filename='images/bg-coach.jpg') }}" alt="">
+  </div>
+  <div class="bg-half bg-player">
+    <img src="{{ url_for('static', filename='images/bg-player.jpg') }}" alt="">
+  </div>
+  <div class="bg-divider"></div>
+</div>
 
 <!-- コンテンツ -->
 <div class="page">
 
   <!-- ロゴ -->
-  <div class="logo-wrap">
-    <!-- b.n SVGロゴ -->
+  <div class="logo-zone">
     <div class="logo-mark">
-      <svg viewBox="0 0 220 100" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="g-silver" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%"   stop-color="#ffffff"/>
-            <stop offset="35%"  stop-color="#e8e8e8"/>
-            <stop offset="65%"  stop-color="#c8c8c8"/>
-            <stop offset="100%" stop-color="#a0a0a0"/>
-          </linearGradient>
-          <linearGradient id="g-slash" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%"   stop-color="rgba(255,255,255,.7)"/>
-            <stop offset="100%" stop-color="rgba(255,255,255,.25)"/>
-          </linearGradient>
-          <filter id="glow">
-            <feGaussianBlur stdDeviation="2" result="blur"/>
-            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-          </filter>
-        </defs>
-
-        <!-- b -->
-        <text x="8" y="88"
-              font-family="Georgia, 'Times New Roman', serif"
-              font-style="italic" font-weight="700"
-              font-size="90" fill="url(#g-silver)" filter="url(#glow)">b</text>
-
-        <!-- ドット -->
-        <circle cx="97" cy="82" r="5" fill="url(#g-silver)" opacity=".9"/>
-
-        <!-- スラッシュ -->
-        <line x1="102" y1="14" x2="118" y2="88"
-              stroke="url(#g-slash)" stroke-width="3.5" stroke-linecap="round"/>
-
-        <!-- n -->
-        <text x="116" y="88"
-              font-family="Georgia, 'Times New Roman', serif"
-              font-style="italic" font-weight="700"
-              font-size="90" fill="url(#g-silver)" filter="url(#glow)">n</text>
-      </svg>
+      <span class="logo-b">b</span>
+      <span class="logo-dot">.</span>
+      <span class="logo-slash">/</span>
+      <span class="logo-n">n</span>
     </div>
-
-    <div class="logo-app-name">BASEBALL APP</div>
-    <div class="logo-tagline">BETTER PLAY.&nbsp;&nbsp;&nbsp;&nbsp;NEXT STAGE.</div>
-    <div class="catchcopy">野球を、もっと本気に。</div>
+    <div class="logo-app">Baseball App</div>
+    <div class="logo-tagline">BETTER PLAY.&nbsp;&nbsp;&nbsp;NEXT STAGE.</div>
   </div>
 
-  <!-- ロール選択ボタン -->
-  <div class="btn-area">
+  <!-- 中央スペース（写真を見せる） -->
+  <div class="spacer"></div>
 
-    <!-- コーチ -->
-    <a href="/login/coach" class="btn-role btn-coach">
-      <svg class="role-icon" viewBox="0 0 54 54" fill="white" xmlns="http://www.w3.org/2000/svg">
-        <!-- 頭 -->
-        <ellipse cx="27" cy="10" rx="7" ry="7.5"/>
-        <!-- キャップひさし -->
-        <rect x="19" y="4" width="16" height="4" rx="2"/>
-        <rect x="17" y="7" width="20" height="3" rx="1.5"/>
-        <!-- 胴体 -->
-        <path d="M17 18 Q10 21 8 29 L7 40 Q7 44 12 44 L42 44 Q47 44 47 40 L46 29 Q44 21 37 18 Z"/>
-        <!-- 左腕（タブレット方向） -->
-        <path d="M17 21 Q7 24 4 33 L7 35 Q10 27 19 25 Z"/>
-        <!-- タブレット -->
-        <rect x="1" y="30" width="14" height="11" rx="2" opacity=".9"/>
-        <!-- 右腕 -->
-        <path d="M37 21 Q47 24 50 35 L47 37 Q44 28 35 26 Z"/>
+  <!-- ロール選択 -->
+  <div class="btn-zone">
+
+    <a href="/login/coach" class="card card-coach">
+      <!-- コーチアイコン -->
+      <svg class="card-icon" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="22" cy="11" r="7" fill="white" opacity=".85"/>
+        <path d="M8 38 C8 28 36 28 36 38" stroke="white" stroke-width="2.5" stroke-linecap="round" fill="none" opacity=".85"/>
+        <path d="M14 23 L8 28 L4 26" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity=".7"/>
+        <rect x="1" y="24" width="8" height="6" rx="1.5" fill="white" opacity=".65"/>
       </svg>
-      <div class="role-title">コーチ</div>
-      <div class="role-desc">選手の成長をサポートし<br>チームを強くするために</div>
-      <div class="role-arrow">→</div>
+      <div class="card-title-ja">コーチ</div>
+      <div class="card-title-en">COACH</div>
+      <div class="card-desc">選手の成長をサポート</div>
+      <div class="card-arrow">→</div>
     </a>
 
-    <!-- 選手 -->
-    <a href="/login/player" class="btn-role btn-player">
-      <svg class="role-icon" viewBox="0 0 54 54" fill="white" xmlns="http://www.w3.org/2000/svg">
-        <!-- ヘルメット -->
-        <ellipse cx="25" cy="10" rx="8" ry="8.5"/>
-        <ellipse cx="23" cy="5" rx="9" ry="4.5"/>
-        <rect x="16" y="14" width="16" height="5" rx="2.5"/>
-        <!-- つば -->
-        <path d="M15 13 Q9 15 11 22 L15 21 Z"/>
-        <!-- 胴体 -->
-        <path d="M15 20 Q7 23 5 33 L4 44 Q4 48 10 48 L40 48 Q46 48 46 44 L45 33 Q43 23 35 20 Z"/>
-        <!-- バット振り：両腕伸ばし -->
-        <path d="M32 22 Q42 16 50 9 L52 13 Q44 21 34 27 Z"/>
+    <a href="/login/player" class="card card-player">
+      <!-- 選手アイコン -->
+      <svg class="card-icon" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="18" cy="10" r="7" fill="white" opacity=".85"/>
+        <path d="M4 38 C4 28 32 28 32 38" stroke="white" stroke-width="2.5" stroke-linecap="round" fill="none" opacity=".85"/>
         <!-- バット -->
-        <rect x="46" y="4" width="6" height="34" rx="3" transform="rotate(-35 46 4)" opacity=".95"/>
-        <!-- 左腕 -->
-        <path d="M18 24 Q8 18 3 10 L6 8 Q14 18 22 25 Z"/>
+        <line x1="28" y1="16" x2="42" y2="4" stroke="white" stroke-width="2.8" stroke-linecap="round" opacity=".8"/>
+        <!-- 手 -->
+        <circle cx="27" cy="17" r="2.5" fill="white" opacity=".75"/>
       </svg>
-      <div class="role-title">選手</div>
-      <div class="role-desc">自分のデータを知り<br>さらなるレベルへ</div>
-      <div class="role-arrow">→</div>
+      <div class="card-title-ja">選手</div>
+      <div class="card-title-en">PLAYER</div>
+      <div class="card-desc">自分のデータを知り<br>さらに上へ</div>
+      <div class="card-arrow">→</div>
     </a>
 
   </div>
+
 </div>
-
-<script>
-(function() {
-  var canvas = document.getElementById('bg-canvas');
-  var ctx = canvas.getContext('2d');
-
-  function draw() {
-    var W = window.innerWidth;
-    var H = window.innerHeight;
-    canvas.width  = W;
-    canvas.height = H;
-
-    /* ── ベース：深いネイビー ── */
-    ctx.fillStyle = '#050d1c';
-    ctx.fillRect(0, 0, W, H);
-
-    /* ── 左半分（コーチ側：夕暮れグラウンド） ── */
-    var gL = ctx.createRadialGradient(W * .18, H * .3, 0, W * .18, H * .3, W * .7);
-    gL.addColorStop(0,   'rgba(160, 70, 10, .28)');
-    gL.addColorStop(.35, 'rgba(90, 40, 5, .18)');
-    gL.addColorStop(1,   'rgba(0,0,0,0)');
-    ctx.fillStyle = gL;
-    ctx.fillRect(0, 0, W, H);
-
-    /* グラウンド地面ライン（左） */
-    var gGround = ctx.createLinearGradient(0, H * .62, 0, H * .9);
-    gGround.addColorStop(0,   'rgba(80,50,10,.22)');
-    gGround.addColorStop(1,   'rgba(40,20,5,.08)');
-    ctx.fillStyle = gGround;
-    ctx.fillRect(0, H * .55, W * .5, H * .45);
-
-    /* グラウンドラインの細かい横筋 */
-    ctx.strokeStyle = 'rgba(100,70,20,.06)';
-    ctx.lineWidth = 1;
-    for (var i = 0; i < 12; i++) {
-      var y = H * .58 + i * (H * .04);
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(W * .5, y + (W * .5) * .04);
-      ctx.stroke();
-    }
-
-    /* ── 右半分（選手側：夜の球場） ── */
-    var gR = ctx.createRadialGradient(W * .82, H * .15, 0, W * .82, H * .15, W * .8);
-    gR.addColorStop(0,   'rgba(180,200,255,.22)');
-    gR.addColorStop(.25, 'rgba(80,120,220,.12)');
-    gR.addColorStop(.6,  'rgba(20,50,120,.06)');
-    gR.addColorStop(1,   'rgba(0,0,0,0)');
-    ctx.fillStyle = gR;
-    ctx.fillRect(W * .5, 0, W * .5, H);
-
-    /* 右上：球場ライト光源 */
-    var gLight1 = ctx.createRadialGradient(W * .92, H * .08, 0, W * .92, H * .08, W * .3);
-    gLight1.addColorStop(0,   'rgba(220,235,255,.35)');
-    gLight1.addColorStop(.15, 'rgba(180,210,255,.18)');
-    gLight1.addColorStop(.4,  'rgba(100,150,255,.06)');
-    gLight1.addColorStop(1,   'rgba(0,0,0,0)');
-    ctx.fillStyle = gLight1;
-    ctx.fillRect(W * .5, 0, W * .5, H * .6);
-
-    /* 右：2つ目のライト光源 */
-    var gLight2 = ctx.createRadialGradient(W * .68, H * .12, 0, W * .68, H * .12, W * .2);
-    gLight2.addColorStop(0,   'rgba(200,220,255,.25)');
-    gLight2.addColorStop(.3,  'rgba(120,160,255,.08)');
-    gLight2.addColorStop(1,   'rgba(0,0,0,0)');
-    ctx.fillStyle = gLight2;
-    ctx.fillRect(W * .5, 0, W * .5, H * .5);
-
-    /* ── 中央分割（対角線的なぼかし） ── */
-    var gCenter = ctx.createLinearGradient(W * .42, 0, W * .58, H);
-    gCenter.addColorStop(0,   'rgba(0,0,0,0)');
-    gCenter.addColorStop(.45, 'rgba(0,0,0,.25)');
-    gCenter.addColorStop(.55, 'rgba(0,0,0,.25)');
-    gCenter.addColorStop(1,   'rgba(0,0,0,0)');
-    ctx.fillStyle = gCenter;
-    ctx.fillRect(0, 0, W, H);
-
-    /* 中央の細い分割ライン */
-    var gLine = ctx.createLinearGradient(0, 0, 0, H);
-    gLine.addColorStop(0,   'rgba(255,255,255,0)');
-    gLine.addColorStop(.2,  'rgba(255,255,255,.06)');
-    gLine.addColorStop(.5,  'rgba(255,255,255,.12)');
-    gLine.addColorStop(.8,  'rgba(255,255,255,.06)');
-    gLine.addColorStop(1,   'rgba(255,255,255,0)');
-    ctx.strokeStyle = gLine;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(W * .5, 0);
-    ctx.lineTo(W * .5, H);
-    ctx.stroke();
-
-    /* ── 上部フェード（ロゴ可読性のため暗く） ── */
-    var gTop = ctx.createLinearGradient(0, 0, 0, H * .45);
-    gTop.addColorStop(0,   'rgba(5,12,28,.75)');
-    gTop.addColorStop(.3,  'rgba(5,12,28,.45)');
-    gTop.addColorStop(1,   'rgba(5,12,28,0)');
-    ctx.fillStyle = gTop;
-    ctx.fillRect(0, 0, W, H * .45);
-
-    /* ── 下部フェード（ボタン可読性のため） ── */
-    var gBot = ctx.createLinearGradient(0, H * .55, 0, H);
-    gBot.addColorStop(0,   'rgba(5,10,22,0)');
-    gBot.addColorStop(.4,  'rgba(5,10,22,.65)');
-    gBot.addColorStop(1,   'rgba(4,8,18,.85)');
-    ctx.fillStyle = gBot;
-    ctx.fillRect(0, H * .45, W, H * .55);
-
-    /* ── コーチシルエット（左側）── */
-    drawCoach(ctx, W, H);
-
-    /* ── 選手シルエット（右側）── */
-    drawPlayer(ctx, W, H);
-  }
-
-  function drawCoach(ctx, W, H) {
-    var x = W * .22;
-    var y = H * .78;
-    var sc = H * .0038;
-
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.scale(sc, sc);
-    ctx.fillStyle = 'rgba(20,10,4,.65)';
-
-    /* 胴体 */
-    ctx.beginPath();
-    ctx.ellipse(0, -60, 28, 38, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.beginPath();
-    ctx.moveTo(-32, -22);
-    ctx.bezierCurveTo(-50, -10, -55, 30, -52, 80);
-    ctx.lineTo(52, 80);
-    ctx.bezierCurveTo(55, 30, 50, -10, 32, -22);
-    ctx.closePath();
-    ctx.fill();
-
-    /* キャップ */
-    ctx.beginPath();
-    ctx.ellipse(0, -96, 26, 8, 0, Math.PI, 0);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.rect(-40, -96, 80, 10);
-    ctx.fill();
-
-    /* 左腕（下に向く） */
-    ctx.save();
-    ctx.rotate(-.3);
-    ctx.beginPath();
-    ctx.moveTo(-30, -10);
-    ctx.bezierCurveTo(-70, 10, -88, 40, -80, 70);
-    ctx.lineTo(-65, 65);
-    ctx.bezierCurveTo(-72, 40, -55, 15, -15, -2);
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
-
-    /* タブレット */
-    ctx.save();
-    ctx.translate(-82, 48);
-    ctx.rotate(-.08);
-    ctx.beginPath();
-    ctx.roundRect(-20, -28, 40, 52, 4);
-    ctx.fillStyle = 'rgba(20,10,4,.7)';
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(60,40,15,.5)';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    ctx.restore();
-
-    /* 右腕（後ろ） */
-    ctx.save();
-    ctx.rotate(.25);
-    ctx.beginPath();
-    ctx.moveTo(30, -10);
-    ctx.bezierCurveTo(70, 10, 80, 50, 72, 80);
-    ctx.lineTo(58, 76);
-    ctx.bezierCurveTo(65, 46, 55, 10, 17, -2);
-    ctx.closePath();
-    ctx.fillStyle = 'rgba(15,8,3,.6)';
-    ctx.fill();
-    ctx.restore();
-
-    /* 脚 */
-    ctx.fillStyle = 'rgba(20,10,4,.65)';
-    ctx.beginPath();
-    ctx.roundRect(-28, 78, 22, 80, 8);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.roundRect(6, 78, 22, 80, 8);
-    ctx.fill();
-
-    ctx.restore();
-  }
-
-  function drawPlayer(ctx, W, H) {
-    var x = W * .78;
-    var y = H * .82;
-    var sc = H * .0042;
-
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.scale(sc, sc);
-    ctx.fillStyle = 'rgba(40,65,140,.62)';
-
-    /* 胴体 */
-    ctx.beginPath();
-    ctx.ellipse(0, -62, 27, 34, -.1, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.beginPath();
-    ctx.moveTo(-30, -30);
-    ctx.bezierCurveTo(-55, -15, -58, 28, -55, 80);
-    ctx.lineTo(48, 80);
-    ctx.bezierCurveTo(52, 28, 46, -15, 22, -30);
-    ctx.closePath();
-    ctx.fill();
-
-    /* ヘルメット */
-    ctx.beginPath();
-    ctx.ellipse(0, -96, 28, 26, -.1, 0, Math.PI * 2);
-    ctx.fill();
-    /* つば */
-    ctx.beginPath();
-    ctx.moveTo(-28, -78);
-    ctx.bezierCurveTo(-50, -75, -55, -60, -40, -55);
-    ctx.lineTo(-28, -68);
-    ctx.closePath();
-    ctx.fill();
-
-    /* 両腕（バットスイング） */
-    ctx.fillStyle = 'rgba(45,70,150,.62)';
-    /* 後ろ腕 */
-    ctx.beginPath();
-    ctx.moveTo(18, -20);
-    ctx.bezierCurveTo(50, -10, 80, -30, 100, -55);
-    ctx.lineTo(88, -65);
-    ctx.bezierCurveTo(72, -40, 45, -22, 10, -30);
-    ctx.closePath();
-    ctx.fill();
-    /* 前腕 */
-    ctx.beginPath();
-    ctx.moveTo(-20, -15);
-    ctx.bezierCurveTo(-55, -5, -80, -25, -98, -55);
-    ctx.lineTo(-86, -63);
-    ctx.bezierCurveTo(-68, -32, -45, -18, -12, -22);
-    ctx.closePath();
-    ctx.fill();
-
-    /* バット */
-    ctx.save();
-    ctx.translate(95, -60);
-    ctx.rotate(-1.1);
-    ctx.beginPath();
-    ctx.roundRect(-5, -90, 10, 90, 5);
-    ctx.fillStyle = 'rgba(50,70,130,.65)';
-    ctx.fill();
-    ctx.restore();
-
-    /* 脚 */
-    ctx.fillStyle = 'rgba(40,65,140,.62)';
-    ctx.save();
-    ctx.rotate(.12);
-    ctx.beginPath();
-    ctx.roundRect(-26, 78, 22, 80, 8);
-    ctx.fill();
-    ctx.restore();
-    ctx.save();
-    ctx.rotate(-.08);
-    ctx.beginPath();
-    ctx.roundRect(6, 78, 22, 80, 8);
-    ctx.fill();
-    ctx.restore();
-
-    ctx.restore();
-  }
-
-  draw();
-  window.addEventListener('resize', draw);
-})();
-</script>
 
 </body>
 </html>
