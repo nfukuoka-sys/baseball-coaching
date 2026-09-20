@@ -1424,49 +1424,6 @@ def uploaded_file(filepath):
     return send_from_directory(UPLOAD_DIR, filepath)
 
 
-@app.route('/admin/cleanup-src', methods=['POST'])
-@login_required
-@coach_required
-def cleanup_src_files():
-    """Delete leftover _src.* files from failed video conversions."""
-    deleted = []
-    freed = 0
-    for root, dirs, fnames in os.walk(UPLOAD_DIR):
-        for fn in fnames:
-            if '_src.' in fn:
-                p = os.path.join(root, fn)
-                size = os.path.getsize(p)
-                try:
-                    os.remove(p)
-                    deleted.append({'file': fn, 'size_mb': round(size/1e6, 1)})
-                    freed += size
-                except Exception as e:
-                    deleted.append({'file': fn, 'error': str(e)})
-    import json
-    return json.dumps({'deleted': deleted, 'freed_mb': round(freed/1e6, 1)}, ensure_ascii=False)
-
-
-@app.route('/admin/diskcheck')
-@login_required
-@coach_required
-def diskcheck():
-    import shutil
-    total, used, free = shutil.disk_usage(DATA_DIR)
-    files = []
-    for root, dirs, fnames in os.walk(UPLOAD_DIR):
-        for fn in fnames:
-            p = os.path.join(root, fn)
-            files.append({'name': os.path.relpath(p, UPLOAD_DIR), 'size': os.path.getsize(p)})
-    files.sort(key=lambda x: x['size'], reverse=True)
-    import json
-    return json.dumps({
-        'disk_total_gb': round(total/1e9, 2),
-        'disk_used_gb':  round(used/1e9, 2),
-        'disk_free_gb':  round(free/1e9, 2),
-        'upload_dir':    UPLOAD_DIR,
-        'file_count':    len(files),
-        'top_files':     files[:20],
-    }, ensure_ascii=False, indent=2)
 
 
 # ─── Init ─────────────────────────────────────────────────────────────────────
