@@ -1424,6 +1424,29 @@ def uploaded_file(filepath):
     return send_from_directory(UPLOAD_DIR, filepath)
 
 
+@app.route('/admin/diskcheck')
+@login_required
+@coach_required
+def diskcheck():
+    import shutil
+    total, used, free = shutil.disk_usage(DATA_DIR)
+    files = []
+    for root, dirs, fnames in os.walk(UPLOAD_DIR):
+        for fn in fnames:
+            p = os.path.join(root, fn)
+            files.append({'name': os.path.relpath(p, UPLOAD_DIR), 'size': os.path.getsize(p)})
+    files.sort(key=lambda x: x['size'], reverse=True)
+    import json
+    return json.dumps({
+        'disk_total_gb': round(total/1e9, 2),
+        'disk_used_gb':  round(used/1e9, 2),
+        'disk_free_gb':  round(free/1e9, 2),
+        'upload_dir':    UPLOAD_DIR,
+        'file_count':    len(files),
+        'top_files':     files[:20],
+    }, ensure_ascii=False, indent=2)
+
+
 # ─── Init ─────────────────────────────────────────────────────────────────────
 
 def init_db():
