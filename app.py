@@ -1424,6 +1424,28 @@ def uploaded_file(filepath):
     return send_from_directory(UPLOAD_DIR, filepath)
 
 
+@app.route('/admin/cleanup-src', methods=['POST'])
+@login_required
+@coach_required
+def cleanup_src_files():
+    """Delete leftover _src.* files from failed video conversions."""
+    deleted = []
+    freed = 0
+    for root, dirs, fnames in os.walk(UPLOAD_DIR):
+        for fn in fnames:
+            if '_src.' in fn:
+                p = os.path.join(root, fn)
+                size = os.path.getsize(p)
+                try:
+                    os.remove(p)
+                    deleted.append({'file': fn, 'size_mb': round(size/1e6, 1)})
+                    freed += size
+                except Exception as e:
+                    deleted.append({'file': fn, 'error': str(e)})
+    import json
+    return json.dumps({'deleted': deleted, 'freed_mb': round(freed/1e6, 1)}, ensure_ascii=False)
+
+
 @app.route('/admin/diskcheck')
 @login_required
 @coach_required
