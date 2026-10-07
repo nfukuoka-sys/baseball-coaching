@@ -3,7 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>b.n BASEBALL APP</title>
+  <title>DIMENSIONING</title>
+  <link rel="manifest" href="/static/manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="DIMENSIONING">
+  <meta name="theme-color" content="#0b1930">
+  <link rel="apple-touch-icon" href="/static/images/apple-touch-icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;600;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
   <style>
@@ -89,17 +95,13 @@
       align-items: center; justify-content: center; padding: 0 20px;
     }
     .logo-mark { display: flex; align-items: baseline; gap: 2px; margin-bottom: 10px; }
-    .logo-b, .logo-n {
-      font-family: 'Georgia', serif; font-style: italic; font-weight: 700;
-      font-size: clamp(64px, 20vw, 100px); line-height: .95;
+    .logo-dim {
+      font-family: 'Oswald', sans-serif; font-weight: 700;
+      font-size: clamp(28px, 9vw, 52px); letter-spacing: .18em; line-height: 1;
       color: transparent;
       background: linear-gradient(180deg, #fff 0%, #e0e0e0 40%, #b8b8b8 70%, #888 100%);
       -webkit-background-clip: text; background-clip: text;
       filter: drop-shadow(0 2px 12px rgba(0,0,0,.7));
-    }
-    .logo-dot {
-      font-family: 'Georgia', serif; font-size: clamp(20px, 6vw, 30px);
-      color: rgba(255,255,255,.8); padding-bottom: 8px; align-self: flex-end;
     }
     .logo-app {
       font-family: 'Oswald', sans-serif; font-weight: 600;
@@ -175,15 +177,14 @@
       text-align: center; margin-bottom: 32px;
     }
     .login-logo-mark { display: flex; align-items: baseline; justify-content: center; gap: 1px; margin-bottom: 8px; }
-    .login-logo-b, .login-logo-n {
-      font-family: 'Georgia', serif; font-style: italic; font-weight: 700;
-      font-size: 48px; line-height: .95;
+    .login-logo-dim {
+      font-family: 'Oswald', sans-serif; font-weight: 700;
+      font-size: 26px; letter-spacing: .2em; line-height: 1;
       color: transparent;
       background: linear-gradient(180deg, #fff 0%, #ccc 100%);
       -webkit-background-clip: text; background-clip: text;
       filter: drop-shadow(0 1px 6px rgba(0,0,0,.6));
     }
-    .login-logo-dot { font-family: 'Georgia', serif; font-size: 16px; color: rgba(255,255,255,.7); padding-bottom: 5px; align-self: flex-end; }
     .login-role-label {
       font-family: 'Oswald', sans-serif; font-weight: 600;
       font-size: .85rem; letter-spacing: .3em; color: rgba(255,255,255,.55);
@@ -256,11 +257,9 @@
 <div class="top-ui" id="top-ui">
   <div class="logo-zone">
     <div class="logo-mark">
-      <span class="logo-b">b</span>
-      <span class="logo-dot">.</span>
-      <span class="logo-n">n</span>
+      <span class="logo-dim">DIMENSIONING</span>
     </div>
-    <div class="logo-app">Baseball App</div>
+    <div class="logo-app">BASEBALL COACHING</div>
     <div class="logo-tagline">BETTER PLAY.&nbsp;&nbsp;&nbsp;NEXT STAGE.</div>
   </div>
   <div class="spacer"></div>
@@ -300,9 +299,7 @@
     </button>
     <div class="login-logo">
       <div class="login-logo-mark">
-        <span class="login-logo-b">b</span>
-        <span class="login-logo-dot">.</span>
-        <span class="login-logo-n">n</span>
+        <span class="login-logo-dim">DIMENSIONING</span>
       </div>
       <div class="login-role-label">Coach Login</div>
     </div>
@@ -335,9 +332,7 @@
     </button>
     <div class="login-logo">
       <div class="login-logo-mark">
-        <span class="login-logo-b">b</span>
-        <span class="login-logo-dot">.</span>
-        <span class="login-logo-n">n</span>
+        <span class="login-logo-dim">DIMENSIONING</span>
       </div>
       <div class="login-role-label">Player Login</div>
     </div>

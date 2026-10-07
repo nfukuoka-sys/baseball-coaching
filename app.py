@@ -329,6 +329,18 @@ class CoachFeedback(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
+class TrainingLog(db.Model):
+    id          = db.Column(db.Integer, primary_key=True)
+    player_id   = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    program_id  = db.Column(db.Integer, db.ForeignKey('training_program.id'), nullable=False)
+    day_of_week = db.Column(db.Integer, nullable=False)   # 0=月〜6=日
+    log_date    = db.Column(db.Date, nullable=False)       # 実際の日付
+    created_at  = db.Column(db.DateTime, default=datetime.utcnow)
+    __table_args__ = (
+        db.UniqueConstraint('player_id', 'program_id', 'day_of_week', 'log_date', name='uq_training_log'),
+    )
+
+
 @login_manager.user_loader
 def load_user(uid):
     return db.session.get(User, int(uid))
@@ -681,6 +693,21 @@ def player_detail(player_id):
                                        .order_by(PlayerVideo.uploaded_at.desc()).all()
     programs        = TrainingProgram.query.filter_by(player_id=player_id, is_active=True)\
                                           .order_by(TrainingProgram.created_at.desc()).all()
+    log_start = date.today() - timedelta(days=27)
+    training_logs   = TrainingLog.query.filter_by(player_id=player_id)\
+                                       .filter(TrainingLog.log_date >= log_start)\
+                                       .order_by(TrainingLog.log_date.desc()).all()
+    logged_dates = {tl.log_date for tl in training_logs}
+    cal_days = []
+    for i in range(27, -1, -1):
+        d = date.today() - timedelta(days=i)
+        cal_days.append({
+            'date': d,
+            'date_str': d.strftime('%-m/%-d'),
+            'month_day': d.strftime('%m/%d'),
+            'dow': d.weekday(),
+            'logged': d in logged_dates,
+        })
 
     return render_template('coach/player_detail.html',
                            player=player,
@@ -690,7 +717,9 @@ def player_detail(player_id):
                            today_str=today_str, pitch_types=PITCH_TYPES,
                            vald_tests=VALD_TESTS, active_invite=active_invite,
                            feedbacks=feedbacks, player_videos=player_videos,
-                           programs=programs, categories=CATEGORIES)
+                           programs=programs, categories=CATEGORIES,
+                           training_logs=training_logs, days=DAYS,
+                           cal_days=cal_days)
 
 
 # ── Priority note ──
@@ -1079,13 +1108,45 @@ def player_dashboard():
 def player_programs():
     if current_user.role == 'coach':
         return redirect(url_for('coach_dashboard'))
-    from datetime import datetime as _dt
     programs = TrainingProgram.query.filter_by(
         player_id=current_user.id, is_active=True
     ).order_by(TrainingProgram.created_at.desc()).all()
-    today_dow = _dt.now().weekday()  # 0=月 6=日
+    today = date.today()
+    today_dow = today.weekday()  # 0=月 6=日
+    today_logs = {
+        (tl.program_id, tl.day_of_week)
+        for tl in TrainingLog.query.filter_by(player_id=current_user.id, log_date=today).all()
+    }
     return render_template('player/programs.html', programs=programs,
-                           categories=CATEGORIES, days=DAYS, today_dow=today_dow)
+                           categories=CATEGORIES, days=DAYS, today_dow=today_dow,
+                           today_logs=today_logs, today_date=today)
+
+
+@app.route('/player/programs/<int:prog_id>/log', methods=['POST'])
+@login_required
+def log_training(prog_id):
+    if current_user.role != 'player':
+        abort(403)
+    dow = request.form.get('day_of_week', type=int)
+    if dow is None or dow not in range(7):
+        abort(400)
+    today = date.today()
+    existing = TrainingLog.query.filter_by(
+        player_id=current_user.id, program_id=prog_id,
+        day_of_week=dow, log_date=today
+    ).first()
+    if existing:
+        db.session.delete(existing)
+        db.session.commit()
+        flash('チェックを外しました', 'success')
+    else:
+        db.session.add(TrainingLog(
+            player_id=current_user.id, program_id=prog_id,
+            day_of_week=dow, log_date=today
+        ))
+        db.session.commit()
+        flash('トレーニング完了を記録しました！', 'success')
+    return redirect(url_for('player_programs'))
 
 
 @app.route('/player/profile')

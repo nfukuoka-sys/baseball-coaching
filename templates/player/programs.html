@@ -28,7 +28,7 @@
   {% endfor %}
 </div>
 
-{% set cat_order = ['投球','打撃','プライオボール','スタビリティ','モビリティ','ストレングス','コンディショニング','その他'] %}
+{% set cat_order = ['投球','打撃','プライオボール','プライオメトリクス','スタビリティ','モビリティ','ストレングス','コンディショニング','その他'] %}
 
 {% for prog in programs %}
 <div class="dm-card" style="margin-bottom:20px;">
@@ -107,6 +107,29 @@
     </div>
     {% endif %}
     {% endfor %}
+    {% if day_has_items.v and didx == today_dow %}
+    {% set is_done = (prog.id, didx) in today_logs %}
+    <div style="margin-top:8px;padding-top:12px;border-top:1px dashed rgba(0,0,0,.08);">
+      <form method="POST" action="{{ url_for('log_training', prog_id=prog.id) }}">
+        <input type="hidden" name="day_of_week" value="{{ didx }}">
+        {% if is_done %}
+        <button type="submit"
+                style="width:100%;padding:12px;border-radius:10px;border:2px solid #16a34a;
+                       background:#f0fdf4;color:#16a34a;font-size:.88rem;font-weight:800;
+                       cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+          <i class="bi bi-check-circle-fill"></i> 本日のトレーニング完了！　タップで取り消し
+        </button>
+        {% else %}
+        <button type="submit"
+                style="width:100%;padding:12px;border-radius:10px;border:2px solid var(--dm-accent);
+                       background:var(--dm-navy);color:#fff;font-size:.88rem;font-weight:800;
+                       cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+          <i class="bi bi-check2-circle"></i> 今日のトレーニングを完了としてチェック
+        </button>
+        {% endif %}
+      </form>
+    </div>
+    {% endif %}
     {% if not day_has_items.v %}
     <div style="padding:20px 0;text-align:center;color:var(--dm-muted);font-size:.8rem;">
       <i class="bi bi-calendar-x" style="font-size:1.3rem;display:block;margin-bottom:6px;opacity:.3;"></i>
