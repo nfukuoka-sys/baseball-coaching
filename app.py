@@ -332,12 +332,12 @@ class CoachFeedback(db.Model):
 class TrainingLog(db.Model):
     id          = db.Column(db.Integer, primary_key=True)
     player_id   = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    program_id  = db.Column(db.Integer, db.ForeignKey('training_program.id'), nullable=False)
-    day_of_week = db.Column(db.Integer, nullable=False)   # 0=月〜6=日
-    log_date    = db.Column(db.Date, nullable=False)       # 実際の日付
+    item_id     = db.Column(db.Integer, db.ForeignKey('program_item.id'), nullable=False)
+    log_date    = db.Column(db.Date, nullable=False)
     created_at  = db.Column(db.DateTime, default=datetime.utcnow)
+    item        = db.relationship('ProgramItem')
     __table_args__ = (
-        db.UniqueConstraint('player_id', 'program_id', 'day_of_week', 'log_date', name='uq_training_log'),
+        db.UniqueConstraint('player_id', 'item_id', 'log_date', name='uq_training_log'),
     )
 
 
@@ -696,7 +696,7 @@ def player_detail(player_id):
     log_start = date.today() - timedelta(days=27)
     training_logs   = TrainingLog.query.filter_by(player_id=player_id)\
                                        .filter(TrainingLog.log_date >= log_start)\
-                                       .order_by(TrainingLog.log_date.desc()).all()
+                                       .order_by(TrainingLog.log_date.asc(), TrainingLog.item_id.asc()).all()
     logged_dates = {tl.log_date for tl in training_logs}
     cal_days = []
     for i in range(27, -1, -1):
@@ -1113,40 +1113,40 @@ def player_programs():
     ).order_by(TrainingProgram.created_at.desc()).all()
     today = date.today()
     today_dow = today.weekday()  # 0=月 6=日
-    today_logs = {
-        (tl.program_id, tl.day_of_week)
+    today_done_items = {
+        tl.item_id
         for tl in TrainingLog.query.filter_by(player_id=current_user.id, log_date=today).all()
     }
     return render_template('player/programs.html', programs=programs,
                            categories=CATEGORIES, days=DAYS, today_dow=today_dow,
-                           today_logs=today_logs, today_date=today)
+                           today_done_items=today_done_items, today_date=today)
 
 
-@app.route('/player/programs/<int:prog_id>/log', methods=['POST'])
+@app.route('/player/items/<int:item_id>/toggle', methods=['POST'])
 @login_required
-def log_training(prog_id):
+def toggle_item_log(item_id):
     if current_user.role != 'player':
         abort(403)
-    dow = request.form.get('day_of_week', type=int)
-    if dow is None or dow not in range(7):
-        abort(400)
+    item = ProgramItem.query.get_or_404(item_id)
+    prog = TrainingProgram.query.get_or_404(item.program_id)
+    if prog.player_id != current_user.id:
+        abort(403)
     today = date.today()
     existing = TrainingLog.query.filter_by(
-        player_id=current_user.id, program_id=prog_id,
-        day_of_week=dow, log_date=today
+        player_id=current_user.id, item_id=item_id, log_date=today
     ).first()
     if existing:
         db.session.delete(existing)
         db.session.commit()
-        flash('チェックを外しました', 'success')
+        done = False
     else:
         db.session.add(TrainingLog(
-            player_id=current_user.id, program_id=prog_id,
-            day_of_week=dow, log_date=today
+            player_id=current_user.id, item_id=item_id, log_date=today
         ))
         db.session.commit()
-        flash('トレーニング完了を記録しました！', 'success')
-    return redirect(url_for('player_programs'))
+        done = True
+    from flask import jsonify
+    return jsonify({'done': done, 'item_id': item_id})
 
 
 @app.route('/player/profile')

@@ -56,80 +56,95 @@
         <span style="font-size:.72rem;color:var(--dm-muted);">{{ cat_items|length }}種目</span>
       </div>
       {% for item in cat_items %}
-      {# ドリルの動画情報をdata属性に埋め込む #}
       {% set has_video = item.drill.video_file or item.drill.youtube_url %}
-      <div onclick="{% if has_video %}openDrillModal(this){% endif %}"
-           data-title="{{ item.drill.title }}"
-           data-category="{{ item.drill.category }}"
-           data-sets="{{ item.sets }}"
-           data-reps="{{ item.reps }}"
-           data-description="{{ (item.drill.description or '') | replace('"', '&quot;') }}"
-           data-notes="{{ (item.drill.notes or '') | replace('"', '&quot;') }}"
-           {% if item.drill.video_file %}data-video="{{ url_for('uploaded_file', filepath=item.drill.video_file) }}"{% endif %}
-           {% if item.drill.youtube_url %}data-youtube="{{ item.drill.youtube_url }}"{% endif %}
-           style="display:flex;align-items:center;gap:12px;background:var(--dm-light);
-                  border-radius:8px;padding:12px 14px;margin-bottom:6px;
-                  border:1px solid rgba(0,0,0,.04);
-                  {% if has_video %}cursor:pointer;{% endif %}">
-        {% if item.drill.image_file %}
-        <img src="{{ url_for('uploaded_file', filepath=item.drill.image_file) }}"
-             style="width:48px;height:36px;object-fit:cover;border-radius:5px;flex-shrink:0;">
+      {% set is_today_pane = (didx == today_dow) %}
+      {% set item_done = item.id in today_done_items %}
+      <div id="row-{{ item.id }}"
+           style="display:flex;align-items:center;gap:10px;border-radius:10px;padding:10px 12px;margin-bottom:6px;
+                  border:1.5px solid {% if item_done and is_today_pane %}#86efac{% else %}rgba(0,0,0,.07){% endif %};
+                  background:{% if item_done and is_today_pane %}#f0fdf4{% else %}var(--dm-light){% endif %};
+                  transition:.2s;">
+
+        {# チェックボタン（今日のみアクティブ） #}
+        {% if is_today_pane %}
+        <button onclick="toggleCheck({{ item.id }}, this)" id="chk-{{ item.id }}"
+                style="width:34px;height:34px;border-radius:50%;border:2px solid {% if item_done %}#16a34a{% else %}#cbd5e1{% endif %};
+                       background:{% if item_done %}#16a34a{% else %}#fff{% endif %};
+                       display:flex;align-items:center;justify-content:center;cursor:pointer;
+                       flex-shrink:0;transition:.2s;-webkit-tap-highlight-color:transparent;">
+          <i class="bi bi-check-lg" id="chk-icon-{{ item.id }}"
+             style="font-size:.9rem;color:{% if item_done %}#fff{% else %}#cbd5e1{% endif %};font-weight:900;"></i>
+        </button>
         {% else %}
-        <div style="width:48px;height:36px;background:rgba(0,0,0,.08);border-radius:5px;
+        <div style="width:34px;height:34px;border-radius:50%;border:2px solid rgba(0,0,0,.1);
                     display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-          <i class="bi bi-play-circle" style="color:var(--dm-muted);font-size:1.1rem;"></i>
+          <i class="bi bi-circle" style="font-size:.8rem;color:rgba(0,0,0,.15);"></i>
         </div>
         {% endif %}
-        <div style="flex:1;min-width:0;">
-          <div style="font-weight:700;font-size:.85rem;color:var(--dm-navy);">{{ item.drill.title }}</div>
-          {% if item.note %}
-          <div style="font-size:.72rem;color:var(--dm-blue);margin-top:2px;">{{ item.note }}</div>
+
+        {# ドリル情報（動画モーダルトリガー） #}
+        <div onclick="{% if has_video %}openDrillModal(this){% endif %}"
+             data-title="{{ item.drill.title }}"
+             data-category="{{ item.drill.category }}"
+             data-sets="{{ item.sets }}"
+             data-reps="{{ item.reps }}"
+             data-description="{{ (item.drill.description or '') | replace('"', '&quot;') }}"
+             data-notes="{{ (item.drill.notes or '') | replace('"', '&quot;') }}"
+             {% if item.drill.video_file %}data-video="{{ url_for('uploaded_file', filepath=item.drill.video_file) }}"{% endif %}
+             {% if item.drill.youtube_url %}data-youtube="{{ item.drill.youtube_url }}"{% endif %}
+             style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;{% if has_video %}cursor:pointer;{% endif %}">
+          {% if item.drill.image_file %}
+          <img src="{{ url_for('uploaded_file', filepath=item.drill.image_file) }}"
+               style="width:44px;height:33px;object-fit:cover;border-radius:5px;flex-shrink:0;">
+          {% else %}
+          <div style="width:44px;height:33px;background:rgba(0,0,0,.08);border-radius:5px;
+                      display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <i class="bi bi-play-circle" style="color:var(--dm-muted);font-size:1rem;"></i>
+          </div>
           {% endif %}
+          <div style="flex:1;min-width:0;">
+            <div id="title-{{ item.id }}"
+                 style="font-weight:700;font-size:.83rem;
+                        {% if item_done and is_today_pane %}color:#16a34a;text-decoration:line-through;{% else %}color:var(--dm-navy);{% endif %}">
+              {{ item.drill.title }}
+            </div>
+            {% if item.note %}
+            <div style="font-size:.7rem;color:var(--dm-blue);margin-top:1px;">{{ item.note }}</div>
+            {% endif %}
+            {% if has_video %}
+            <div style="font-size:.63rem;color:#d97706;font-weight:700;margin-top:2px;">
+              <i class="bi bi-play-fill me-1"></i>動画あり
+            </div>
+            {% endif %}
+          </div>
+          <div style="flex-shrink:0;text-align:right;margin-right:2px;">
+            <div style="font-size:.95rem;font-weight:900;color:var(--dm-navy);line-height:1.1;">
+              {{ item.sets }}<span style="font-size:.6rem;font-weight:600;color:var(--dm-muted);">set</span>
+            </div>
+            <div style="font-size:.78rem;font-weight:700;color:var(--dm-blue);">
+              {{ item.reps }}<span style="font-size:.6rem;font-weight:600;color:var(--dm-muted);">rep</span>
+            </div>
+          </div>
           {% if has_video %}
-          <div style="font-size:.65rem;color:#d97706;font-weight:700;margin-top:2px;">
-            <i class="bi bi-play-fill me-1"></i>動画あり
-          </div>
+          <i class="bi bi-chevron-right" style="color:var(--dm-muted);font-size:.75rem;flex-shrink:0;"></i>
           {% endif %}
         </div>
-        <div style="flex-shrink:0;text-align:right;">
-          <div style="font-size:1rem;font-weight:900;color:var(--dm-navy);line-height:1.1;">
-            {{ item.sets }}<span style="font-size:.65rem;font-weight:600;color:var(--dm-muted);">セット</span>
-          </div>
-          <div style="font-size:.8rem;font-weight:700;color:var(--dm-blue);">
-            {{ item.reps }}<span style="font-size:.65rem;font-weight:600;color:var(--dm-muted);">回</span>
-          </div>
-        </div>
-        {% if has_video %}
-        <i class="bi bi-chevron-right" style="color:var(--dm-muted);font-size:.8rem;flex-shrink:0;"></i>
-        {% endif %}
       </div>
       {% endfor %}
+
+      {# 今日のパネル：完了カウンター #}
+      {% if is_today_pane %}
+      {% set total_items = cat_items|length %}
+      <div id="progress-{{ prog.id }}-{{ cat }}" style="text-align:right;margin-top:2px;margin-bottom:4px;">
+        <span style="font-size:.68rem;color:var(--dm-muted);">
+          <span class="done-count" data-prog="{{ prog.id }}" data-cat="{{ cat }}">{{ cat_items | selectattr('id','in', today_done_items) | list | length }}</span>/{{ total_items }}完了
+        </span>
+      </div>
+      {% endif %}
+
     </div>
     {% endif %}
     {% endfor %}
-    {% if day_has_items.v and didx == today_dow %}
-    {% set is_done = (prog.id, didx) in today_logs %}
-    <div style="margin-top:8px;padding-top:12px;border-top:1px dashed rgba(0,0,0,.08);">
-      <form method="POST" action="{{ url_for('log_training', prog_id=prog.id) }}">
-        <input type="hidden" name="day_of_week" value="{{ didx }}">
-        {% if is_done %}
-        <button type="submit"
-                style="width:100%;padding:12px;border-radius:10px;border:2px solid #16a34a;
-                       background:#f0fdf4;color:#16a34a;font-size:.88rem;font-weight:800;
-                       cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
-          <i class="bi bi-check-circle-fill"></i> 本日のトレーニング完了！　タップで取り消し
-        </button>
-        {% else %}
-        <button type="submit"
-                style="width:100%;padding:12px;border-radius:10px;border:2px solid var(--dm-accent);
-                       background:var(--dm-navy);color:#fff;font-size:.88rem;font-weight:800;
-                       cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
-          <i class="bi bi-check2-circle"></i> 今日のトレーニングを完了としてチェック
-        </button>
-        {% endif %}
-      </form>
-    </div>
-    {% endif %}
     {% if not day_has_items.v %}
     <div style="padding:20px 0;text-align:center;color:var(--dm-muted);font-size:.8rem;">
       <i class="bi bi-calendar-x" style="font-size:1.3rem;display:block;margin-bottom:6px;opacity:.3;"></i>
@@ -187,6 +202,44 @@
 
 <script>
 var TODAY = {{ today_dow }};
+
+// ── チェックボタン AJAX ──
+async function toggleCheck(itemId, btn) {
+  btn.disabled = true;
+  try {
+    var resp = await fetch('/player/items/' + itemId + '/toggle', {
+      method: 'POST',
+      headers: {'X-Requested-With': 'XMLHttpRequest'}
+    });
+    var data = await resp.json();
+    var done = data.done;
+
+    // ボタンの見た目
+    var icon = document.getElementById('chk-icon-' + itemId);
+    btn.style.background = done ? '#16a34a' : '#fff';
+    btn.style.borderColor = done ? '#16a34a' : '#cbd5e1';
+    if (icon) {
+      icon.style.color = done ? '#fff' : '#cbd5e1';
+    }
+
+    // 行の見た目
+    var row = document.getElementById('row-' + itemId);
+    if (row) {
+      row.style.background = done ? '#f0fdf4' : 'var(--dm-light)';
+      row.style.borderColor = done ? '#86efac' : 'rgba(0,0,0,.07)';
+    }
+
+    // タイトルの取り消し線
+    var title = document.getElementById('title-' + itemId);
+    if (title) {
+      title.style.textDecoration = done ? 'line-through' : '';
+      title.style.color = done ? '#16a34a' : 'var(--dm-navy)';
+    }
+  } catch(e) {
+    console.error(e);
+  }
+  btn.disabled = false;
+}
 
 function showDay(idx) {
   for (var i = 0; i < 7; i++) {

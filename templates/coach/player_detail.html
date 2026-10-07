@@ -706,83 +706,76 @@
 
   <!-- ── 実施状況タブ ── -->
   <div id="training-log" class="dm-tab-pane" style="padding:20px;">
-    <div style="font-size:.82rem;color:var(--dm-muted);margin-bottom:16px;">
-      直近28日間のトレーニング実施記録（選手がアプリでチェックした日）
-    </div>
-    {% if training_logs %}
-    {% set logged_dates = training_logs | map(attribute='log_date') | map('string') | list %}
-    <div style="overflow-x:auto;">
-      <table class="dm-table">
-        <thead>
-          <tr>
-            <th>日付</th>
-            <th>曜日</th>
-            <th>プログラム</th>
-            <th>記録時刻</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for log in training_logs %}
-          {% set prog = log.program_id %}
-          <tr>
-            <td>
-              <span style="font-weight:700;color:var(--dm-navy);font-variant-numeric:tabular-nums;">
-                {{ log.log_date.strftime('%m/%d') }}
-              </span>
-            </td>
-            <td>
-              <span style="font-size:.8rem;font-weight:600;
-                           background:var(--dm-light);border-radius:4px;padding:2px 8px;">
-                {{ days[log.day_of_week] }}曜日
-              </span>
-            </td>
-            <td style="font-size:.78rem;color:var(--dm-muted);">
-              {% for p in programs %}
-                {% if p.id == log.program_id %}{{ p.name }}{% endif %}
-              {% endfor %}
-            </td>
-            <td style="font-size:.72rem;color:var(--dm-muted);">
-              {{ log.created_at.strftime('%H:%M') }}
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
 
-    {# 週ごとのカレンダービュー #}
-    <div style="margin-top:20px;">
-      <div style="font-size:.78rem;font-weight:700;color:var(--dm-navy);margin-bottom:10px;letter-spacing:.04em;">
+    {# 4週間カレンダー #}
+    <div style="margin-bottom:20px;">
+      <div style="font-size:.75rem;font-weight:700;color:var(--dm-navy);margin-bottom:8px;letter-spacing:.04em;">
         4週間カレンダー
       </div>
-      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;max-width:420px;">
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;max-width:400px;">
         {% for d in days %}
-        <div style="text-align:center;font-size:.68rem;font-weight:700;color:var(--dm-muted);padding:4px 0;">{{ d }}</div>
+        <div style="text-align:center;font-size:.63rem;font-weight:700;color:var(--dm-muted);padding:3px 0;">{{ d }}</div>
         {% endfor %}
-        {# cal_days は月曜始まりではなく日付順なのでdow位置に合わせて空白を挿入 #}
         {% set first_dow = cal_days[0].dow %}
-        {% for i in range(first_dow) %}
-        <div></div>
-        {% endfor %}
+        {% for i in range(first_dow) %}<div></div>{% endfor %}
         {% for day in cal_days %}
-        <div style="text-align:center;padding:5px 2px;border-radius:6px;
+        <div style="text-align:center;padding:4px 2px;border-radius:5px;
                     {% if day.logged %}background:#dcfce7;border:1px solid #86efac;{% else %}background:var(--dm-light);border:1px solid var(--dm-border);{% endif %}">
-          <div style="font-size:.65rem;font-weight:700;
-                      {% if day.logged %}color:#16a34a;{% else %}color:var(--dm-muted);{% endif %}">
-            {{ day.date_str }}
-          </div>
-          <div style="font-size:.7rem;margin-top:1px;">
-            {% if day.logged %}<i class="bi bi-check-circle-fill" style="color:#16a34a;"></i>{% else %}<span style="color:rgba(0,0,0,.15);">—</span>{% endif %}
+          <div style="font-size:.6rem;font-weight:700;{% if day.logged %}color:#16a34a;{% else %}color:var(--dm-muted);{% endif %}">{{ day.date_str }}</div>
+          <div style="font-size:.68rem;line-height:1.4;">
+            {% if day.logged %}<i class="bi bi-check-circle-fill" style="color:#16a34a;"></i>{% else %}<span style="color:rgba(0,0,0,.12);">—</span>{% endif %}
           </div>
         </div>
         {% endfor %}
       </div>
     </div>
 
+    {# 日付別ログ一覧 #}
+    {% if training_logs %}
+    <div style="font-size:.75rem;font-weight:700;color:var(--dm-navy);margin-bottom:8px;letter-spacing:.04em;">
+      実施詳細（直近28日）
+    </div>
+    {# 日付でグループ化して表示 #}
+    {% set seen_dates = [] %}
+    {% for log in training_logs | sort(attribute='log_date', reverse=True) %}
+    {% if log.log_date not in seen_dates %}
+    {% set _ = seen_dates.append(log.log_date) %}
+    {# この日付のログだけ抽出 #}
+    {% set day_logs = training_logs | selectattr('log_date','equalto',log.log_date) | list %}
+    <div style="margin-bottom:10px;border-radius:8px;border:1px solid var(--dm-border);overflow:hidden;">
+      <div style="background:var(--dm-light);padding:8px 14px;display:flex;align-items:center;gap:10px;">
+        <span style="font-weight:800;font-size:.88rem;color:var(--dm-navy);font-variant-numeric:tabular-nums;">
+          {{ log.log_date.strftime('%m月%d日') }}
+        </span>
+        <span style="font-size:.72rem;font-weight:600;color:var(--dm-muted);">
+          {{ days[log.log_date.weekday()] }}曜日
+        </span>
+        <span style="margin-left:auto;font-size:.7rem;font-weight:700;color:#16a34a;">
+          <i class="bi bi-check-circle-fill me-1"></i>{{ day_logs|length }}種目完了
+        </span>
+      </div>
+      <div style="padding:8px 14px;">
+        {% for dl in day_logs %}
+        <div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:.78rem;
+                    {% if not loop.last %}border-bottom:1px solid rgba(0,0,0,.04);{% endif %}">
+          <i class="bi bi-check-circle-fill" style="color:#16a34a;font-size:.75rem;flex-shrink:0;"></i>
+          <span style="font-weight:600;color:var(--dm-navy);">{{ dl.item.drill.title }}</span>
+          <span style="color:var(--dm-muted);font-size:.7rem;margin-left:auto;">
+            {{ dl.item.sets }}set × {{ dl.item.reps }}
+          </span>
+          <span style="color:var(--dm-muted);font-size:.68rem;">{{ dl.created_at.strftime('%H:%M') }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+    {% endfor %}
+
     {% else %}
-    <div style="text-align:center;padding:48px 20px;color:var(--dm-muted);">
+    <div style="text-align:center;padding:40px 20px;color:var(--dm-muted);">
       <i class="bi bi-calendar-x" style="font-size:2.5rem;display:block;margin-bottom:10px;opacity:.3;"></i>
       <div style="font-size:.82rem;">直近28日間の実施記録はありません</div>
+      <div style="font-size:.72rem;margin-top:4px;">選手がアプリでチェックすると、ここに表示されます</div>
     </div>
     {% endif %}
   </div>
