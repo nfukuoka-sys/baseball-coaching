@@ -1490,6 +1490,18 @@ def uploaded_file(filepath):
 # ─── Init ─────────────────────────────────────────────────────────────────────
 
 def init_db():
+    # training_log テーブルが旧スキーマ(program_id/day_of_week)なら DROP して作り直す
+    try:
+        with db.engine.connect() as conn:
+            result = conn.execute(db.text("PRAGMA table_info(training_log)"))
+            cols = [row[1] for row in result.fetchall()]
+            if cols and 'item_id' not in cols:
+                conn.execute(db.text("DROP TABLE IF EXISTS training_log"))
+                conn.commit()
+                print('⚠️  training_log: 旧スキーマを削除して再作成します')
+    except Exception as e:
+        print(f'migration check error: {e}')
+
     db.create_all()
     coach = User.query.filter_by(email='n.fukuoka@dimensioning.jp').first()
     if not coach:
