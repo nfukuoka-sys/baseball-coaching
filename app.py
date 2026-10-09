@@ -1113,13 +1113,24 @@ def player_programs():
     ).order_by(TrainingProgram.created_at.desc()).all()
     today = date.today()
     today_dow = today.weekday()  # 0=月 6=日
-    today_done_items = {
-        tl.item_id
-        for tl in TrainingLog.query.filter_by(player_id=current_user.id, log_date=today).all()
-    }
+
+    # 今週 月〜日の日付リスト
+    week_start = today - timedelta(days=today_dow)
+    week_dates = [week_start + timedelta(days=i) for i in range(7)]
+
+    # 今週のログ済み日付セット
+    week_logs = TrainingLog.query.filter_by(player_id=current_user.id)\
+        .filter(TrainingLog.log_date >= week_start,
+                TrainingLog.log_date <= week_start + timedelta(days=6)).all()
+    week_logged_dates = {tl.log_date for tl in week_logs}
+
+    # 今日チェック済みアイテムセット
+    today_done_items = {tl.item_id for tl in week_logs if tl.log_date == today}
+
     return render_template('player/programs.html', programs=programs,
                            categories=CATEGORIES, days=DAYS, today_dow=today_dow,
-                           today_done_items=today_done_items, today_date=today)
+                           today_done_items=today_done_items, today_date=today,
+                           week_dates=week_dates, week_logged_dates=week_logged_dates)
 
 
 @app.route('/player/items/<int:item_id>/toggle', methods=['POST'])

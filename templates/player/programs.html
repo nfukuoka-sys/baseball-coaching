@@ -8,8 +8,47 @@
   </a>
 </div>
 
-<div style="font-size:1.1rem;font-weight:800;letter-spacing:.04em;color:var(--dm-navy);margin-bottom:16px;">
+<div style="font-size:1.1rem;font-weight:800;letter-spacing:.04em;color:var(--dm-navy);margin-bottom:12px;">
   <i class="bi bi-journal-text me-2"></i>トレーニングプログラム
+</div>
+
+{# ── 今日の日付バナー ── #}
+<div style="background:var(--dm-navy);border-radius:12px;padding:14px 18px;margin-bottom:14px;
+            display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+  <div>
+    <div id="today-date-display" style="font-size:1.1rem;font-weight:800;color:#fff;letter-spacing:.02em;"></div>
+    <div id="today-dow-display" style="font-size:.72rem;color:rgba(255,255,255,.5);margin-top:2px;letter-spacing:.06em;"></div>
+  </div>
+  <div id="today-check-summary" style="font-size:.8rem;color:rgba(255,255,255,.7);"></div>
+</div>
+
+{# ── 今週カレンダー ── #}
+<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:16px;">
+  {% for i in range(7) %}
+  {% set wd = week_dates[i] %}
+  {% set is_today = (i == today_dow) %}
+  {% set has_log = wd in week_logged_dates %}
+  <button onclick="showDay({{ i }})" id="cal-{{ i }}"
+          style="display:flex;flex-direction:column;align-items:center;padding:6px 2px;border-radius:10px;
+                 cursor:pointer;border:none;transition:.15s;position:relative;
+                 {% if is_today %}background:var(--dm-navy);{% elif has_log %}background:#dcfce7;border:1px solid #86efac;{% else %}background:var(--dm-light);border:1px solid var(--dm-border);{% endif %}">
+    <span style="font-size:.62rem;font-weight:700;
+                 {% if is_today %}color:rgba(255,255,255,.6);{% elif has_log %}color:#16a34a;{% else %}color:var(--dm-muted);{% endif %}">
+      {{ ['月','火','水','木','金','土','日'][i] }}
+    </span>
+    <span style="font-size:.85rem;font-weight:900;margin-top:1px;
+                 {% if is_today %}color:#fff;{% elif has_log %}color:#16a34a;{% else %}color:var(--dm-navy);{% endif %}">
+      {{ wd.day }}
+    </span>
+    {% if has_log %}
+    <span style="font-size:.55rem;color:#16a34a;margin-top:1px;">✓</span>
+    {% elif is_today %}
+    <span style="width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.6);margin-top:2px;display:block;"></span>
+    {% else %}
+    <span style="font-size:.55rem;color:transparent;">—</span>
+    {% endif %}
+  </button>
+  {% endfor %}
 </div>
 
 {% if programs %}
@@ -197,6 +236,19 @@
 <script>
 var TODAY = {{ today_dow }};
 
+// ── 今日の日付をリアルタイム表示 ──
+(function() {
+  var DOW_JA = ['日','月','火','水','木','金','土'];
+  var now = new Date();
+  var m = now.getMonth() + 1;
+  var d = now.getDate();
+  var dow = DOW_JA[now.getDay()];
+  var el = document.getElementById('today-date-display');
+  if (el) el.textContent = m + '月' + d + '日（' + dow + '曜日）';
+  var el2 = document.getElementById('today-dow-display');
+  if (el2) el2.textContent = 'TODAY';
+})();
+
 // ── チェックボタン AJAX ──
 async function toggleCheck(itemId, btn) {
   btn.disabled = true;
@@ -236,6 +288,7 @@ async function toggleCheck(itemId, btn) {
 }
 
 function showDay(idx) {
+  // 曜日タブ
   for (var i = 0; i < 7; i++) {
     var tab = document.getElementById('tab-' + i);
     if (!tab) continue;
@@ -249,9 +302,22 @@ function showDay(idx) {
       tab.style.border = '1px solid var(--dm-border)';
     }
   }
+  // コンテンツパネル
   document.querySelectorAll('.day-pane').forEach(function(p) {
     p.style.display = parseInt(p.dataset.day) === idx ? 'block' : 'none';
   });
+  // カレンダーボタンの選択状態を更新
+  for (var j = 0; j < 7; j++) {
+    var cal = document.getElementById('cal-' + j);
+    if (!cal) continue;
+    if (j === idx) {
+      cal.style.outline = '2.5px solid var(--dm-accent)';
+      cal.style.outlineOffset = '2px';
+    } else {
+      cal.style.outline = '';
+      cal.style.outlineOffset = '';
+    }
+  }
 }
 
 function openDrillModal(el) {
